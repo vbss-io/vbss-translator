@@ -1,5 +1,5 @@
 {
-  "name": "vbss-translator",
+  "name": "@vbss-io/vbss-translator",
   "version": "0.0.1",
   "private": false,
   "type": "module",
@@ -20,7 +20,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vbss/vbss-translator.git"
+    "url": "git+https://github.com/vbss-io/vbss-translator.git"
   },
   "scripts": {
     "dev": "vite",
