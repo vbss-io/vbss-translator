@@ -112,7 +112,7 @@ For example:
 - Browser language: pt-BR
 - Default language: en
 
-The app will automatically use Portuguese as default if not provided or browser language not available.
+The app will automatically use English as default if not provided or browser language not available.
 
 ### Persisting the Selected Language
 
@@ -138,11 +138,10 @@ ReactDOM.render(
 |Prop|Type|Default Value|Description|
 |---|---|---|---|
 |`translations`|`Record<string>[]`|Required|The translations JSON file or object.|
-|`defaultLanguage`|`string`|`'pt'`|The fallback/default language.|
+|`defaultLanguage`|`string`|`'en'`|The fallback/default language.|
 |`autoDetectLanguage`|`boolean`|`false`|If true, detects the user's browser language automatically.|
 |`persist`|`boolean`|`false`|If provided, persists the language in `localStorage` with persistKey.|
 |`persistKey`|`string`|`language`|If provided, customize the `localStorage` key.|
-
 
 ### **`useTranslator` Hook**
 

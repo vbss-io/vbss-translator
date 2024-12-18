@@ -18,7 +18,7 @@ const setPersistedLanguage  = (persistKey: string, lang: string) => {
 export const TranslatorProvider = ({
   children,
   translations,
-  defaultLanguage = 'pt',
+  defaultLanguage = 'en',
   persist = false,
   persistKey = 'language',
   autoDetectLanguage = false
