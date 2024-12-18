@@ -19,13 +19,13 @@ A lightweight and customizable React translation hook to easily handle multiling
 Install the package using npm or yarn:
 
 ```bash
-npm install react-simple-translator
+npm install vbss-translator
 ```
 
 or
 
 ```bash
-yarn add react-simple-translator
+yarn add vbss-translator
 ```
 
 ---
