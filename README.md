@@ -16,17 +16,25 @@ A lightweight and customizable React translation hook to easily handle multiling
 
 ## Installation
 
-Install the package using npm or yarn:
+Install the package using npm:
 
 ```bash
 npm install vbss-translator
 ```
 
-or
+or yarn:
 
 ```bash
 yarn add vbss-translator
 ```
+
+or Github Registry:
+
+```bash
+ npm install @vbss-io/vbss-translator@0.0.1
+```
+
+*Github Registry may cause incompatibility with npm registry.*
 
 ---
 
