@@ -43,9 +43,10 @@ export const TranslatorProvider = ({
 
     if (!translation?.[language]) {
       console.warn(`[Translator Debug] Missing translation "${language}" for: '${text}'`);
+      return text
     }
 
-    return translation ? translation[language] : text;
+    return translation[language]
   };
 
   return (
