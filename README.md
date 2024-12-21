@@ -47,14 +47,12 @@ Create a JSON file for translations. For example: `translations.json`
 ```json
 [
   {
-    "en": {
-      "greeting": "Hello",
-      "goodbye": "Goodbye"
-    },
-    "pt": {
-      "greeting": "Olá",
-      "goodbye": "Adeus"
-    }
+    "en": "Hello",
+    "pt": "Olá"
+  },
+  {
+    "en": "Goodbye",
+    "pt": "Adeus"
   }
 ]
 ```
