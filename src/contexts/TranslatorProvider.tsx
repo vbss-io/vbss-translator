@@ -23,9 +23,9 @@ export const TranslatorProvider = ({
   persistKey = 'language',
   autoDetectLanguage = false
 }: TranslatorProviderType) => {
-  const persistedLanguage = persist ? getPersistedLanguage(persistKey) : undefined
-  const initialLanguage = autoDetectLanguage && !persistedLanguage ? getBrowserLanguage(defaultLanguage) : defaultLanguage;
-  const [language, setLanguage] = useState<string>(initialLanguage);
+  const persistedLanguage = persist ? getPersistedLanguage(persistKey) : null
+  const autoDetectedLanguage = autoDetectLanguage ? getBrowserLanguage(defaultLanguage) : null
+  const [language, setLanguage] = useState<string>(persistedLanguage ?? autoDetectedLanguage ?? defaultLanguage);
 
   useEffect(() => {
     if (persist) {
