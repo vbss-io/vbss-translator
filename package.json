@@ -1,6 +1,6 @@
 {
   "name": "vbss-translator",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "private": false,
   "type": "module",
   "license": "MIT",
@@ -14,28 +14,47 @@
       "types": "./dist/vbss-translator.d.ts",
       "import": "./dist/vbss-translator.js",
       "require": "./dist/vbss-translator-umd.cjs"
+    },
+    "./generator": {
+      "types": "./dist/generator.d.ts",
+      "import": "./dist/generator.js",
+      "require": "./dist/generator.cjs"
     }
   },
   "types": "./dist/vbss-translator.d.ts",
   "sideEffects": false,
+  "bin": {
+    "vbss-translator": "./dist/cli/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vbss-io/vbss-translator.git"
   },
+  "author": "Vitor Bastos <vitor@vbss.io> (https://vbss.io/)",
+  "homepage": "https://ui.vbss.io/tools/vbss-translator",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "build": "tsc && vite build && vite build --mode generator && vite build --mode cli",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "coverage": "jest --coverage",
+    "generate-translations": "node dist/cli/index.js",
+    "typecheck": "tsc --noEmit",
     "patch-deploy": "npm version patch && npm publish",
     "minor-deploy": "npm version minor && npm publish",
     "major-deploy": "npm version major && npm publish"
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "glob": "^10.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
@@ -44,6 +63,10 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.12.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.15.0",
     "vite": "^6.0.1",

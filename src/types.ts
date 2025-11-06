@@ -8,7 +8,7 @@ export type TranslatorProviderType = {
   defaultLanguage?: string;
   persist?: boolean;
   persistKey?: string;
-  autoDetectLanguage?: boolean
+  autoDetectLanguage?: boolean;
 };
 
 export type TranslatorContextType = {
