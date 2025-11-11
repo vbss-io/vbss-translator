@@ -26,7 +26,11 @@ dist-ssr
 # Tests
 coverage/
 
+# envs
+.env
+
 # AI
+.claude/
 .cursor/
 templates/
 tasks/

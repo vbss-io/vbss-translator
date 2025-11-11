@@ -1,421 +1,358 @@
 # vbss-translator
 
-A lightweight and customizable React translation hook to easily handle multilingual websites. Includes support for browser language auto-detection, local persistence of language, and customizable translation files.
+A lightweight React translation toolkit focused on ergonomics, sensible defaults, and escape hatches when local dictionaries are not enough. Ship multilingual web apps with a context-driven provider, `useTranslator` hook, and a CLI that keeps translation indexes in sync.
 
-## **Support**
+## Support the Project
 
-Help us keep vbss-translator free and open source. Your support enables continuous development, better docs and new features.
+Help us keep vbss-translator free and maintained:
 
 - Buy me a coffee: [buymeacoffee.com/vbss.io](https://www.buymeacoffee.com/vbss.io)
 - Star on GitHub: [github.com/vbss-io/vbss-translator](https://github.com/vbss-io/vbss-translator)
-- Share with community: [ui.vbss.io/tools/vbss-translator](https://ui.vbss.io/tools/vbss-translator)
-
-Thank you for supporting the project!
+- Share the tool: [ui.vbss.io/tools/vbss-translator](https://ui.vbss.io/tools/vbss-translator)
 
 ---
 
-## Features
+## Feature Highlights
 
-- Auto-detect browser language to set the initial language.
-- Persist selected language in local storage.
-- Customizable and dynamic translation keys.
-- Minimalistic integration with React via useTranslator hook.
-- Flexible and developer-friendly API.
-- CLI tool to generate translation index files from multiple translation JSON files scattered across your project.
-- Tested with Jest and React Testing Library.
+- React context + hook with zero-config setup
+- Auto-detect browser language and persist selections
+- External fallback (Google Translate out-of-the-box) with caching, dedupe, veto hooks, and structured logs
+- Translation status flags for fine-grained loading states
+- Programmatic translation generator CLI with watch mode and rich validation
+- Battle-tested with Jest + React Testing Library
 
 ---
 
 ## Installation
 
-Install the package using npm:
-
 ```bash
 npm install vbss-translator
-```
-
-or yarn:
-
-```bash
+# or
 yarn add vbss-translator
+# or GitHub Registry
+npm install @vbss-io/vbss-translator@0.0.1
 ```
 
-or Github Registry:
-
-```bash
- npm install @vbss-io/vbss-translator@0.0.1
-```
-
-*Github Registry may cause incompatibility with npm registry.*
+> Using the GitHub registry may require additional npm configuration.
 
 ---
 
-## Usage
+## Quick Start
 
-### Setup the `TranslatorProvider`
-
-Create a JSON file for translations. For example: `translations.json`
+1. Create a translation file (`src/translations.json`):
 
 ```json
 [
-  {
-    "en": "Hello",
-    "pt": "Olá"
-  },
-  {
-    "en": "Goodbye",
-    "pt": "Adeus"
-  }
+  { "en": "Hello", "pt": "Olá" },
+  { "en": "Goodbye", "pt": "Adeus" }
 ]
 ```
 
-Wrap your application with the TranslatorProvider to make the translator context available throughout your app.
+1. Mount the provider in your app:
 
 ```typescript
-import translations from './translations.json';
+import ReactDOM from "react-dom";
+import translations from "./translations.json" assert { type: "json" };
+import { TranslatorProvider } from "vbss-translator";
 
 ReactDOM.render(
   <TranslatorProvider translations={translations}>
     <App />
   </TranslatorProvider>,
-  document.getElementById('root')
+  document.getElementById("root")
 );
 ```
 
-### Use the `useTranslator` Hook
-
-The useTranslator hook provides access to the t function for translations and methods to manage the current language.
-
-Example Usage in Components:
+1. Consume translations with the hook:
 
 ```typescript
-import React from 'react';
-import { useTranslator } from 'vbss-translator';
+import { useTranslator } from "vbss-translator";
 
-const ExampleComponent = () => {
-  const { t, setLanguage, language } = useTranslator();
+export function Greeting() {
+  const { t, language, setLanguage } = useTranslator();
 
   return (
-    <div>
-      <h1>{t('Olá')}</h1>
-      <p>Current Language: {language}</p>
-      <button onClick={() => setLanguage('en')}>English</button>
-      <button onClick={() => setLanguage('pt')}>Português</button>
-    </div>
+    <>
+      <h1>{t("Hello")}</h1>
+      <p>Currently showing: {language}</p>
+      <button onClick={() => setLanguage("en")}>English</button>
+      <button onClick={() => setLanguage("pt")}>Português</button>
+    </>
   );
-};
-
-export default ExampleComponent;
-```
-
-### Auto-Detect Browser Language
-
-If you pass the autoDetectLanguage prop to TranslatorProvider, the library will detect the user's browser language automatically. The fallback language will be the defaultLanguage.
-
-```typescript
-ReactDOM.render(
-  <TranslatorProvider
-    translations={translations} 
-    defaultLanguage="en" 
-    autoDetectLanguage 
-  >
-    <App />
-  </TranslatorProvider>,
-  document.getElementById('root')
-);
-```
-
-For example:
-
-- Browser language: pt-BR
-- Default language: en
-
-The app will automatically use English as default if not provided or browser language not available.
-
-### Persisting the Selected Language
-
-To persist the selected language across page reloads, use the persist as true and the optional persistKey prop. This will store the selected language in localStorage under the specified key.
-
-```typescript
-ReactDOM.render(
-  <TranslatorProvider
-    translations={translations}
-    persist
-    persistKey="myAppLanguage" 
-  >
-    <App />
-  </TranslatorProvider>,
-  document.getElementById('root')
-);
-```
-
----
-
-## API Reference
-
-### `TranslatorProvider` Props
-
-|Prop|Type|Default Value|Description|
-|---|---|---|---|
-|`translations`|`Record<string>[]`|Required|The translations JSON file or object.|
-|`defaultLanguage`|`string`|`'en'`|The fallback/default language.|
-|`autoDetectLanguage`|`boolean`|`false`|If true, detects the user's browser language automatically.|
-|`persist`|`boolean`|`false`|If provided, persists the language in `localStorage` with persistKey.|
-|`persistKey`|`string`|`language`|If provided, customize the `localStorage` key.|
-
-### `useTranslator` Hook
-
-The `useTranslator` hook provides the following:
-
-|Property|Type|Description|
-|---|---|---|
-|`t`|`(text: string) => string`|Function to get the translated text for a given key.|
-|`language`|`string`|The currently active language.|
-|`languages`|`string[]`|The currently available languages.|
-|`setLanguage`|`(lang: string) => void`|Function to change the current language.|
-
----
-
-## Translation File Generation CLI
-
-vbss-translator includes a CLI tool to automatically generate translation index files from multiple translation JSON files scattered across your project. This eliminates manual maintenance and ensures your translation index is always up-to-date.
-
-### Quick Start
-
-1. **Install vbss-translator** (if not already installed):
-
-   ```bash
-   npm install vbss-translator
-   ```
-
-2. **Create translation files** in your project:
-
-   ```json
-   // src/components/button/translations.json
-   {
-     "en": "Click me",
-     "pt": "Clique em mim"
-   }
-   ```
-
-3. **Generate the index file**:
-
-   ```bash
-   npx vbss-translator generate
-   ```
-
-   Or add to your `package.json`:
-
-   ```json
-   {
-     "scripts": {
-       "generate-translations": "vbss-translator generate"
-     }
-   }
-   ```
-
-4. **Use the generated index** in your `TranslatorProvider`:
-
-   ```typescript
-   import translations from './src/translations/index.ts';
-   
-   <TranslatorProvider translations={translations}>
-     <App />
-   </TranslatorProvider>
-   ```
-
-### CLI Commands
-
-#### Basic Usage
-
-```bash
-# Generate translations using default settings
-npx vbss-translator generate
-
-# Or use npm script
-npm run generate-translations
-```
-
-#### Command Options
-
-```bash
-vbss-translator generate [options]
-
-Options:
-  --pattern <glob>           Glob pattern to find translation files (default: "src/**/translations.json")
-  --output <path>            Output file path (default: "src/translations/index.ts")
-  --format <ts|js|tsx>       Output format (default: "ts")
-  --reference-language <lang> Language key to use for deduplication (default: first language found)
-  --config <path>            Path to config file (default: "vbss-translator.config.json")
-  --watch, -w                Enable watch mode for automatic regeneration
-  --help, -h                 Show help message
-```
-
-#### Examples
-
-```bash
-# Custom pattern and output
-npx vbss-translator generate --pattern "src/**/*.json" --output "src/i18n/index.ts"
-
-# Generate JavaScript instead of TypeScript
-npx vbss-translator generate --format js --output "src/translations/index.js"
-
-# Use Spanish as reference language for deduplication
-npx vbss-translator generate --reference-language es
-
-# Watch mode for development
-npx vbss-translator generate --watch
-```
-
-### Configuration File
-
-Create a `vbss-translator.config.json` file in your project root to avoid passing options every time:
-
-```json
-{
-  "pattern": "src/**/translations.json",
-  "outputPath": "src/translations/index.ts",
-  "outputFormat": "ts",
-  "referenceLanguage": "en"
 }
 ```
 
-**Configuration Options:**
+---
 
-- `pattern` (string): Glob pattern to find translation files. Supports `**` for recursive directory traversal.
-- `outputPath` (string): Path where the generated index file will be created.
-- `outputFormat` (`"ts"` | `"js"` | `"tsx"`): Format of the generated file.
-  - `"ts"`: TypeScript with interface definitions
-  - `"js"`: JavaScript without types
-  - `"tsx"`: TypeScript (same as `ts`, for React component files)
-- `referenceLanguage` (string, optional): Language key to use for deduplication. Defaults to the first language found in translation files.
+## Local Translations & Matching Rules
 
-**Note:** CLI flags always override config file settings.
+- `translations` must be an array of objects where every object uses the same language keys.
+- When `t(text)` is called, the provider performs a **case-insensitive match across every value** in the translation array. The first record containing that value becomes the source dictionary entry.
+- Given the matched entry:
+  - The translation for the active language is returned if available.
+  - Fallback order: explicit `fallbackValue` → cached external value → first non-empty value in the entry → the original input string.
+
+This means you can seed your UI with any language copy (`t("Olá")`) as long as the entry exists with consistent language keys.
+
+---
+
+## Managing Languages
+
+| Capability | How it works |
+| --- | --- |
+| Default language | `defaultLanguage` prop (defaults to `en`). |
+| Auto-detect browser language | Set `autoDetectLanguage`. The navigator language (e.g. `pt-BR`) is simplified to its base (`pt`) before lookup. Falls back to `defaultLanguage` if missing. |
+| Persist between reloads | Enable `persist`. The active language is stored under `persistKey` (defaults to `language`) in `localStorage`. |
+
+Language changes happen inside a React transition to keep UI responsive.
+
+---
+
+## `TranslateOptions`
+
+Pass options to `t(key, options)` for scoped behaviour:
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `preferExternal` | `boolean` | Force an external translation even if a local translation exists. |
+| `sourceLanguage` | `string` | Explicit source language when translating externally. If omitted, the provider tries to use `defaultLanguage` when available. |
+| `fallbackValue` | `string` | UI text to show until a translation resolves (useful for skeletons/placeholders). |
+| `signal` | `AbortSignal` | Cancels the external request via the underlying provider. |
+
+---
+
+## External Translation Pipeline
+
+External translation is **enabled by default** using Google Translate. Disable globally by passing `externalTranslation={{ enabled: false }}`.
+
+### Key Concepts
+
+- **Always external keys**: Strings registered via `registerExternalKey(key)` or declared in `externalTranslation.alwaysExternalKeys` skip local dictionaries and go straight to the provider.
+- **Status tracking**:
+  - `isTranslatingAny`: `true` when any external request is running.
+  - `isTranslating["your-key::pt"]`: `true` while the specific key/language pair is pending.
+- **Retry window**: Failed external requests enter an error state and are retried after 30 seconds when requested again.
+
+### Configuration Surface
+
+```typescript
+const externalTranslation = {
+  enabled: true,
+  timeoutMs: 5_000,
+  debug: false,
+  provider: {
+    id: "google",
+    apiKey: process.env.GOOGLE_TRANSLATE_KEY,
+    endpoint: "https://translation.googleapis.com/language/translate/v2",
+  },
+  cache: {
+    enabled: true,
+    ttlMs: 30 * 60 * 1000,
+    maxEntries: 500,
+  },
+  glossary: {
+    // Optional terminology map forwarded to providers that support glossaries
+    BRAND_A: "Marca A",
+  },
+  alwaysExternalKeys: ["product.description"],
+  shouldTranslate: ({ key, text }) => !text.includes("SECRET"),
+  onExternalTranslation: ({ key, text }) => {
+    console.info("sending text to provider", { key, text });
+    // Return false (or a resolved Promise) to veto the request.
+  },
+  onTranslationError: ({ key, language, error }) => {
+    console.warn("translation failed", { key, language, error });
+  },
+  onTranslationComplete: (result) => {
+    console.log("external result", result.translatedText);
+  },
+};
+```
+
+| Field | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `enabled` | `boolean` | `true` | Master switch for the entire pipeline. |
+| `timeoutMs` | `number` | `5_000` | Max duration before aborting a request. Exposed to provider via `AbortController`. |
+| `debug` | `boolean` | `false` | Emits structured logs for cache hits, deduped requests, retries, etc. |
+| `provider` | `ProviderConfig` | `{ id: "google" }` | See provider section below. |
+| `cache` | `CacheConfig` | `{ enabled: false, ttlMs: 3_600_000 }` | In-memory cache with TTL and optional LRU size limit (`maxEntries`). |
+| `glossary` | `Record<string, string>` | `undefined` | Optional term overrides sent when the provider supports them. |
+| `alwaysExternalKeys` | `ReadonlySet` | `new Set()` | Automatically merged with strings registered at runtime. |
+| `shouldTranslate` | `(request) => boolean` | `undefined` | Synchronous guard invoked before caching/dedup. Exceptions default to `true`. |
+| `onExternalTranslation` | `(request) => void \| boolean` | `undefined` | Async-friendly hook after `shouldTranslate` but before the network call. Returning `false` cancels the request. |
+| `onTranslationError` | `(event) => void` | `undefined` | Receives normalized provider errors with retry metadata. |
+| `onTranslationComplete` | `(result) => void` | `undefined` | Fires after a successful response and cache write. |
+
+### Provider Behaviour
+
+- The Google provider (`src/external/providers/googleTranslateProvider.ts`) constructs REST calls to the v2 API, supports Glossaries, forwards custom headers, and normalizes errors (incl. retryable codes).
+- Providers may implement `normalizeError` to produce structured failures consumed by the manager.
+- `ExternalTranslationManager` dedupes identical requests, enforces `timeoutMs`, respects `AbortSignal`, handles cache reads/writes, and never throws back into your components. All errors are converted into loggable events and surfaced via callbacks.
+
+### Cache Lifecycle
+
+- Cache entries are stored in-memory only.
+- `TranslationCache` enforces TTL and `maxEntries` (evicts oldest first).
+- `cache.enabled = false` effectively turns the cache into a no-op.
+- Debug logs show cache hits/misses when `debug` is enabled.
+
+---
+
+## `TranslatorProvider` Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `translations` | `Translation[]` | required | Array of translation records. |
+| `defaultLanguage` | `string` | `"en"` | Fallback when a translation is missing or auto-detect fails. |
+| `autoDetectLanguage` | `boolean` | `false` | Use the browser language (base locale) as the initial language. |
+| `persist` | `boolean` | `false` | Persist language to `localStorage`. |
+| `persistKey` | `string` | `"language"` | Storage key used when `persist` is `true`. |
+| `externalTranslation` | `ExternalTranslationConfigInput` | Enabled, Google provider, no cache | External translation behaviour, provider credentials, hooks, and logging. |
+
+`TranslatorProvider` exposes a resolved `externalConfig` through context so you can inspect runtime settings (e.g., toggled cache state).
+
+---
+
+## `useTranslator` API
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `t` | `(text: string, options?: TranslateOptions) => string` | Translate text using local dictionaries + external fallback when needed. |
+| `language` | `string` | Currently active language. |
+| `languages` | `string[]` | Languages derived from the first translation entry. |
+| `setLanguage` | `(lang: string) => void` | Switch languages and persist if enabled. |
+| `isTranslating` | `Record<string, boolean>` | Map keyed by `text::language` showing pending external requests. |
+| `isTranslatingAny` | `boolean` | `true` when any external request is running. |
+| `registerExternalKey` | `(key: string) => void` | Opt a specific string into the external pathway up front. |
+| `externalConfig` | `ExternalTranslationConfig` | Read-only resolved configuration (includes merged `alwaysExternalKeys`). |
+
+### Pattern: Preferring External Translation Per Call
+
+```typescript
+const abortController = new AbortController();
+const { t } = useTranslator();
+const description = t("Our newest product line", {
+  preferExternal: true,
+  fallbackValue: "Loading description…",
+  signal: abortController.signal,
+});
+```
+
+If the external call fails, the original copy is returned and a retry is attempted on subsequent calls after the cooldown window.
+
+---
+
+## CLI & Programmatic Generator
+
+Generate a typed translation index (or plain JS) from scattered JSON files. The CLI orchestrates discovery, validation, deduplication, and file writing.
+
+### Command Reference
+
+```bash
+npx vbss-translator generate [--pattern <glob>] [--output <path>] [--format <ts|js|tsx>] \
+  [--reference-language <lang>] [--config <path>] [--watch|-w]
+```
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--pattern` | Glob for JSON sources. Resolved relative to `process.cwd()`. | `src/**/translations.json` |
+| `--output` | Output file path. Parent directories are created automatically. | `src/translations/index.ts` |
+| `--format` | Output format (`ts`, `js`, or `tsx`). | `ts` |
+| `--reference-language` | Language key used for deduplication. | First language in the first valid file |
+| `--config` | Path to `vbss-translator.config.json`. | Project root |
+| `--watch`, `-w` | Watch mode with regeneration + debug logs. | Disabled |
+
+Order of precedence: **CLI flags > config file > defaults**. Config parsing is performed by `src/cli/config.ts`.
+
+### Output Formats
+
+- **ts / tsx**: Imports each JSON file with `assert { type: "json" }`, exports a `Translation` interface, merges arrays (wrapping standalone objects), dedupes using the reference language, and default-exports `uniqueTranslations`.
+- **js**: Inlines JSON payloads directly into the generated file and performs the same deduplication logic without TypeScript types.
+
+### Validation Rules
+
+The generator checks that:
+
+- Every file parses as JSON (arrays or objects).
+- Each translation record only contains string values.
+- All entries share identical language keys.
+- Language mismatches, missing translations, or file system errors are surfaced as structured `GenerationError`s.
+
+Generation fails fast when validation errors occur; exit code `2` signals schema issues, while other failures exit with `1`.
 
 ### Watch Mode
 
-Watch mode automatically regenerates the translation index when translation files are added, modified, or deleted:
+`npx vbss-translator generate --watch`:
 
-```bash
-npx vbss-translator generate --watch
-```
-
-In watch mode, the tool:
-
-- Monitors all files matching your search pattern
-- Regenerates the index file automatically on changes
-- Continues running until stopped (Ctrl+C)
-- Perfect for development workflows
-
-### Translation File Format
-
-Translation files can be either:
-
-1. **Single object** (automatically wrapped in array):
-
-   ```json
-   {
-     "en": "Hello",
-     "pt": "Olá",
-     "es": "Hola"
-   }
-   ```
-
-2. **Array of objects**:
-
-   ```json
-   [
-     {
-       "en": "Hello",
-       "pt": "Olá"
-     },
-     {
-       "en": "World",
-       "pt": "Mundo"
-     }
-   ]
-   ```
-
-**Important Requirements:**
-
-- All translation files must have the same language keys
-- All values must be strings
-- Files must be valid JSON
+- Runs an initial generation before watching.
+- Uses native `fs.watch` with glob filtering to detect additions, changes, and deletions.
+- Debounces rapid changes (300ms) and regenerates the output file.
+- Keeps running until interrupted. Clean-up handlers close watchers on `SIGINT`/`SIGTERM`.
+- Emits verbose debug logs to help diagnose path matching.
 
 ### Programmatic API
 
-You can also use the generation API programmatically in your code:
-
 ```typescript
-import { generate } from 'vbss-translator';
-import type { GeneratorOptions } from 'vbss-translator';
+import { generate } from "vbss-translator/generator";
+import type { GeneratorOptions } from "vbss-translator/generator";
 
-const options: GeneratorOptions = {
-  pattern: 'src/**/translations.json',
-  outputPath: 'src/translations/index.ts',
-  outputFormat: 'ts',
-  referenceLanguage: 'en',
-};
+const result = await generate({
+  pattern: "src/**/translations.json",
+  outputPath: "src/translations/index.ts",
+  outputFormat: "ts",
+  referenceLanguage: "en",
+});
 
-const result = await generate(options);
-
-if (result.success) {
-  console.log(`Generated ${result.translationsGenerated} translations from ${result.filesFound} files`);
-} else {
-  console.error('Generation failed:', result.errors);
+if (!result.success) {
+  console.error("Generation failed", result.errors);
 }
 ```
 
-### Generated File Structure
-
-The generated index file includes:
-
-1. **Import statements** for all discovered translation files
-2. **TypeScript interface** (when format is `ts` or `tsx`):
-
-   ```typescript
-   export interface Translation {
-     [key: string]: string;
-   }
-   ```
-
-3. **Aggregated translations array** with deduplication:
-
-   ```typescript
-   const allTranslations: Translation[] = [
-     ...translations0,
-     ...translations1,
-     // ...
-   ];
-   
-   const uniqueTranslations = allTranslations.filter(
-     (translation, index, self) => 
-       index === self.findIndex((t) => t.en === translation.en)
-   );
-   ```
-
-4. **Default export**:
-
-   ```typescript
-   export default uniqueTranslations;
-   ```
-
-### Best Practices
-
-1. **Organize translations by feature/component**: Keep translation files close to where they're used
-2. **Use consistent naming**: Name all translation files `translations.json` for easy discovery
-3. **Validate early**: Run generation in your CI/CD pipeline to catch issues early
-4. **Use watch mode in development**: Enable `--watch` during development for automatic updates
-5. **Version control generated files**: Include generated index files in git for consistency across team
-
-For more detailed examples and advanced usage, visit [ui.vbss.io/tools/vbss-translator](https://ui.vbss.io/tools/vbss-translator).
+`generate` returns a `GenerationResult` containing success flag, number of files discovered, number of deduplicated translations, accumulated errors, and the output path. The programmatic API shares the same pipeline as the CLI (discovery, validation, dedupe, and writing).
 
 ---
 
-## Feedback
+## Translation File Requirements
 
-If you enjoy using this package or find any issues, please give us a ⭐ on GitHub or open an issue. We appreciate your support! 🚀
+1. **Single object**
 
-## Contributing
+   ```json
+   { "en": "Hello", "pt": "Olá", "es": "Hola" }
+   ```
 
-We welcome contributions! Feel free to open issues or submit pull requests.
+1. **Array of objects**
+
+   ```json
+   [
+     { "en": "Hello", "pt": "Olá" },
+     { "en": "World", "pt": "Mundo" }
+   ]
+   ```
+
+Rules enforced by the generator:
+
+- Every entry must use the same set of language keys.
+- Every value must be a string.
+- Files must be valid JSON (syntax errors are reported).
+
+> These validations are applied when you run the CLI or programmatic generator. Passing your own `Translation[]` straight into `TranslatorProvider` skips these checks, so validate manually if you craft arrays by hand.
+
+---
+
+## Debugging & Best Practices
+
+- Enable `externalTranslation.debug` during development to track cache hits, deduped requests, vetoes, and timing information. Logs are tagged with `[vbss-translator]`.
+- Register sensitive copy via `registerExternalKey` only after ensuring `shouldTranslate` and `onExternalTranslation` mask or skip secrets.
+- Use `isTranslating` to show per-string loading indicators without blocking initial UI.
+- In CI, run `npx vbss-translator generate` to validate translation files early and fail builds on schema drift.
+- Version-control generated translation indexes so production builds and CI remain deterministic.
+
+---
+
+## Feedback & Contributing
+
+We love hearing from you! If vbss-translator helps your team, please ⭐ the repo or share feedback.
+
+- GitHub: [github.com/vbss-io/vbss-translator](https://github.com/vbss-io/vbss-translator)
+
+🚀 Happy shipping!
