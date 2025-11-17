@@ -28,9 +28,8 @@ const createConfig = (
   overrides: Partial<ExternalTranslationConfig> = {}
 ): ExternalTranslationConfig => ({
   enabled: overrides.enabled ?? true,
-  provider: {
+  provider: overrides.provider ?? {
     id: "google",
-    ...(overrides.provider ?? {}),
   },
   cache: {
     enabled: overrides.cache?.enabled ?? true,
@@ -267,5 +266,191 @@ describe("ExternalTranslationManager", () => {
         }),
       })
     );
+  });
+
+  describe("Custom provider integration", () => {
+    it("uses custom provider for translation requests", async () => {
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockResolvedValue(createResult("Custom translation")),
+      };
+      const manager = createManager({ provider: customProvider });
+      const result = await manager.translate(createRequest());
+      expect(result?.translatedText).toBe("Custom translation");
+      expect(customProvider.translate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: "Hello",
+          targetLanguage: "es",
+          sourceLanguage: "auto",
+        }),
+        expect.objectContaining({
+          signal: expect.any(AbortSignal),
+          timeoutMs: 500,
+        })
+      );
+    });
+
+    it("caches custom provider translations", async () => {
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockResolvedValue(createResult("Custom translation")),
+      };
+      const manager = createManager({ provider: customProvider });
+      const request = createRequest();
+      const first = await manager.translate(request);
+      const second = await manager.translate(request);
+      expect(first?.translatedText).toBe("Custom translation");
+      expect(second?.translatedText).toBe("Custom translation");
+      expect(customProvider.translate).toHaveBeenCalledTimes(1);
+    });
+
+    it("uses custom provider normalizeError when available", async () => {
+      const customError: ProviderError = {
+        code: "custom_error",
+        message: "Custom provider error",
+        retryable: true,
+        details: { customField: "value" },
+      };
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockRejectedValue(new Error("Custom provider error")),
+        normalizeError: jest.fn(() => customError),
+      };
+      const onTranslationError = jest.fn();
+      const manager = createManager({
+        provider: customProvider,
+        config: createConfig({ onTranslationError }),
+      });
+      const result = await manager.translate(createRequest());
+      expect(result).toBeUndefined();
+      expect(customProvider.normalizeError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Custom provider error" })
+      );
+      expect(onTranslationError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: customError,
+        })
+      );
+    });
+
+    it("falls back to default error normalization when custom provider lacks normalizeError", async () => {
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockRejectedValue(new Error("Custom provider error")),
+      };
+      const onTranslationError = jest.fn();
+      const manager = createManager({
+        provider: customProvider,
+        config: createConfig({ onTranslationError }),
+      });
+      const result = await manager.translate(createRequest());
+      expect(result).toBeUndefined();
+      expect(onTranslationError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: "Error",
+            message: "Custom provider error",
+            retryable: false,
+          }),
+        })
+      );
+    });
+
+    it("accepts custom provider with isAvailable method", async () => {
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockResolvedValue(createResult("Custom translation")),
+        isAvailable: jest.fn(() => ({
+          available: true,
+        })),
+      };
+      const manager = createManager({ provider: customProvider });
+      const result = await manager.translate(createRequest());
+      expect(result?.translatedText).toBe("Custom translation");
+      expect(customProvider.translate).toHaveBeenCalled();
+    });
+
+    it("invokes lifecycle hooks with custom provider", async () => {
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockResolvedValue(createResult("Custom translation")),
+      };
+      const shouldTranslate = jest.fn(() => true);
+      const onExternalTranslation = jest.fn().mockResolvedValue(true);
+      const onTranslationComplete = jest.fn();
+      const manager = createManager({
+        provider: customProvider,
+        config: createConfig({
+          shouldTranslate,
+          onExternalTranslation,
+          onTranslationComplete,
+        }),
+      });
+      const result = await manager.translate(createRequest());
+      expect(result?.translatedText).toBe("Custom translation");
+      expect(shouldTranslate).toHaveBeenCalled();
+      expect(onExternalTranslation).toHaveBeenCalled();
+      expect(onTranslationComplete).toHaveBeenCalledWith(result);
+    });
+
+    it("deduplicates concurrent custom provider requests", async () => {
+      jest.useFakeTimers();
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockImplementation(
+          () =>
+            new Promise<TranslateResult>((resolve) => {
+              setTimeout(() => {
+                resolve(createResult("Custom translation"));
+              }, 50);
+            })
+        ),
+      };
+      const manager = createManager({ provider: customProvider });
+      const request = createRequest();
+      const firstPromise = manager.translate(request);
+      const secondPromise = manager.translate(request);
+      await jest.advanceTimersByTimeAsync(50);
+      await Promise.resolve();
+      await expect(firstPromise).resolves.toEqual(createResult("Custom translation"));
+      await expect(secondPromise).resolves.toEqual(createResult("Custom translation"));
+      expect(customProvider.translate).toHaveBeenCalledTimes(1);
+    });
+
+    it("handles custom provider timeout with AbortSignal", async () => {
+      jest.useFakeTimers();
+      const customProvider: TranslationProvider = {
+        type: "custom",
+        translate: jest.fn().mockImplementation(
+          (_request, options) =>
+            new Promise<TranslateResult>((_resolve, reject) => {
+              options?.signal?.addEventListener("abort", () => {
+                reject(new Error("aborted"));
+              });
+            })
+        ),
+      };
+      const onTranslationError = jest.fn();
+      const manager = createManager({
+        provider: customProvider,
+        config: createConfig({
+          timeoutMs: 100,
+          onTranslationError,
+        }),
+      });
+      const promise = manager.translate(createRequest());
+      await jest.advanceTimersByTimeAsync(150);
+      const result = await promise;
+      expect(result).toBeUndefined();
+      expect(onTranslationError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: "greeting",
+          language: "es",
+          error: expect.objectContaining({
+            retryable: expect.any(Boolean),
+          }),
+        })
+      );
+    });
   });
 });

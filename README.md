@@ -16,7 +16,7 @@ Help us keep vbss-translator free and maintained:
 
 - React context + hook with zero-config setup
 - Auto-detect browser language and persist selections
-- External fallback (Google Translate out-of-the-box) with caching, dedupe, veto hooks, and structured logs
+- External fallback (Google Translate out-of-the-box, custom providers supported) with caching, dedupe, veto hooks, and structured logs
 - Translation status flags for fine-grained loading states
 - Programmatic translation generator CLI with watch mode and rich validation
 - Battle-tested with Jest + React Testing Library
@@ -29,11 +29,7 @@ Help us keep vbss-translator free and maintained:
 npm install vbss-translator
 # or
 yarn add vbss-translator
-# or GitHub Registry
-npm install @vbss-io/vbss-translator@0.0.1
 ```
-
-> Using the GitHub registry may require additional npm configuration.
 
 ---
 
@@ -123,7 +119,7 @@ Pass options to `t(key, options)` for scoped behaviour:
 
 ## External Translation Pipeline
 
-External translation is **enabled by default** using Google Translate. Disable globally by passing `externalTranslation={{ enabled: false }}`.
+External translation is **disabled by default**. Enable it by passing `externalTranslation={{ enabled: true }}` with your provider configuration (e.g., Google Translate).
 
 ### Key Concepts
 
@@ -171,10 +167,10 @@ const externalTranslation = {
 
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `enabled` | `boolean` | `true` | Master switch for the entire pipeline. |
+| `enabled` | `boolean` | `false` | Master switch for the entire pipeline. |
 | `timeoutMs` | `number` | `5_000` | Max duration before aborting a request. Exposed to provider via `AbortController`. |
 | `debug` | `boolean` | `false` | Emits structured logs for cache hits, deduped requests, retries, etc. |
-| `provider` | `ProviderConfig` | `{ id: "google" }` | See provider section below. |
+| `provider` | `ProviderConfig` | `{ id: "google" }` | Google or custom provider config. See provider sections below. |
 | `cache` | `CacheConfig` | `{ enabled: false, ttlMs: 3_600_000 }` | In-memory cache with TTL and optional LRU size limit (`maxEntries`). |
 | `glossary` | `Record<string, string>` | `undefined` | Optional term overrides sent when the provider supports them. |
 | `alwaysExternalKeys` | `ReadonlySet` | `new Set()` | Automatically merged with strings registered at runtime. |
@@ -188,6 +184,193 @@ const externalTranslation = {
 - The Google provider (`src/external/providers/googleTranslateProvider.ts`) constructs REST calls to the v2 API, supports Glossaries, forwards custom headers, and normalizes errors (incl. retryable codes).
 - Providers may implement `normalizeError` to produce structured failures consumed by the manager.
 - `ExternalTranslationManager` dedupes identical requests, enforces `timeoutMs`, respects `AbortSignal`, handles cache reads/writes, and never throws back into your components. All errors are converted into loggable events and surfaced via callbacks.
+
+### Custom Translation Providers
+
+Beyond Google Translate, you can supply your own translation implementation by configuring a `custom` provider. Custom providers must satisfy the `TranslationProvider` contract, ensuring compatibility with caching, error handling, and instrumentation without additional adapters.
+
+#### Registering a Custom Provider
+
+Supply either an `implementation` (a pre-built provider instance) or a `factory` (a function returning a provider) in your configuration:
+
+```typescript
+import {
+  TranslatorProvider,
+  type TranslationProvider,
+  type TranslateRequest,
+  type TranslateResult,
+} from "vbss-translator";
+
+// Custom provider implementation
+const myCustomProvider: TranslationProvider = {
+  type: "custom",
+  checkAvailability: async () => ({ available: true }),
+  translate: async (request: TranslateRequest): Promise<TranslateResult> => {
+    // Your custom translation logic here
+    const response = await fetch("https://my-translation-api.com/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: request.text,
+        source: request.sourceLanguage,
+        target: request.targetLanguage,
+      }),
+    });
+    const data = await response.json();
+    return {
+      translatedText: data.translation,
+      detectedSourceLanguage: request.sourceLanguage,
+    };
+  },
+};
+
+<TranslatorProvider
+  translations={translations}
+  externalTranslation={{
+    enabled: true,
+    provider: {
+      id: "custom",
+      implementation: myCustomProvider,
+    },
+    cache: { enabled: true, ttlMs: 1800000 },
+  }}
+>
+  <App />
+</TranslatorProvider>
+```
+
+#### Using a Provider Factory
+
+For scenarios requiring initialization logic or dependency injection, supply a factory function:
+
+```typescript
+const providerFactory = () => {
+  const apiKey = process.env.CUSTOM_TRANSLATION_KEY;
+  const endpoint = process.env.CUSTOM_TRANSLATION_ENDPOINT;
+
+  return {
+    type: "custom",
+    checkAvailability: async () => {
+      if (!apiKey || !endpoint) {
+        return { available: false, reason: "Missing configuration" };
+      }
+      return { available: true };
+    },
+    translate: async (request: TranslateRequest): Promise<TranslateResult> => {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: request.text,
+          from: request.sourceLanguage,
+          to: request.targetLanguage,
+          glossary: request.glossary,
+        }),
+      });
+      const data = await response.json();
+      return {
+        translatedText: data.result,
+        providerMetadata: { provider: "custom" },
+      };
+    },
+  };
+};
+
+<TranslatorProvider
+  translations={translations}
+  externalTranslation={{
+    enabled: true,
+    provider: {
+      id: "custom",
+      factory: providerFactory,
+    },
+  }}
+>
+  <App />
+</TranslatorProvider>
+```
+
+#### Custom Provider Contract
+
+Your implementation must satisfy the `TranslationProvider` interface:
+
+```typescript
+interface TranslationProvider {
+  type: string;
+  checkAvailability: () => Promise<ProviderAvailability>;
+  translate: (request: TranslateRequest) => Promise<TranslateResult>;
+  normalizeError?: (error: unknown) => ProviderError;
+}
+```
+
+- `type`: String identifier for your provider (typically `"custom"`).
+- `checkAvailability`: Validates provider readiness (e.g., credentials, network).
+- `translate`: Accepts `TranslateRequest` (text, source/target languages, optional glossary) and returns `TranslateResult` (translated text, optional metadata).
+- `normalizeError` (optional): Converts provider-specific errors into structured `ProviderError` with retryable flags.
+
+#### Switching Between Providers
+
+Toggle between Google and custom providers without changing downstream code:
+
+```typescript
+// Use Google Translate
+const googleConfig = {
+  enabled: true,
+  provider: {
+    id: "google",
+    apiKey: process.env.GOOGLE_TRANSLATE_KEY,
+  },
+};
+
+// Use custom provider
+const customConfig = {
+  enabled: true,
+  provider: {
+    id: "custom",
+    implementation: myCustomProvider,
+  },
+};
+
+// Select provider at runtime
+const activeConfig = useGoogleTranslate ? googleConfig : customConfig;
+
+<TranslatorProvider
+  translations={translations}
+  externalTranslation={activeConfig}
+>
+  <App />
+</TranslatorProvider>
+```
+
+#### Testing Custom Providers
+
+Validate your custom provider before production:
+
+```typescript
+import { createTranslationProvider } from "vbss-translator/factory";
+
+const provider = createTranslationProvider({
+  id: "custom",
+  implementation: myCustomProvider,
+});
+
+// Test availability
+const availability = await provider.checkAvailability();
+console.log("Provider available:", availability.available);
+
+// Test translation
+const result = await provider.translate({
+  text: "Hello",
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+});
+console.log("Translation:", result.translatedText);
+```
+
+Custom providers integrate seamlessly with the existing cache, logging, and callback infrastructure. All `shouldTranslate`, `onExternalTranslation`, `onTranslationError`, and `onTranslationComplete` hooks work identically regardless of the active provider.
 
 ### Cache Lifecycle
 
@@ -207,7 +390,7 @@ const externalTranslation = {
 | `autoDetectLanguage` | `boolean` | `false` | Use the browser language (base locale) as the initial language. |
 | `persist` | `boolean` | `false` | Persist language to `localStorage`. |
 | `persistKey` | `string` | `"language"` | Storage key used when `persist` is `true`. |
-| `externalTranslation` | `ExternalTranslationConfigInput` | Enabled, Google provider, no cache | External translation behaviour, provider credentials, hooks, and logging. |
+| `externalTranslation` | `ExternalTranslationConfigInput` | Disabled by default | External translation behaviour, provider credentials, hooks, and logging. |
 
 `TranslatorProvider` exposes a resolved `externalConfig` through context so you can inspect runtime settings (e.g., toggled cache state).
 

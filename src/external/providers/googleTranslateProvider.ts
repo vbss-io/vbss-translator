@@ -1,7 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance } from "axios";
 import type {
   ProviderAvailability,
-  ProviderConfig,
   ProviderError,
   TranslateRequest,
   TranslateResult,
@@ -10,6 +9,15 @@ import type {
   TranslationProvider,
   TranslationProviderTranslateOptions,
 } from "@/external/providers/types";
+
+type GoogleProviderConfig = {
+  readonly id: "google";
+  readonly apiKey?: string;
+  readonly endpoint?: string;
+  readonly projectId?: string;
+  readonly region?: string;
+  readonly headers?: Record<string, string>;
+};
 
 type GoogleTranslateResponse = {
   data?: {
@@ -37,7 +45,7 @@ export class GoogleTranslateProvider implements TranslationProvider {
 
   private readonly axios: AxiosInstance;
 
-  constructor(private readonly config: ProviderConfig) {
+  constructor(private readonly config: GoogleProviderConfig) {
     this.axios = axios.create({
       baseURL: config.endpoint ?? DEFAULT_ENDPOINT,
       headers: {

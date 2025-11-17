@@ -1,17 +1,29 @@
 import type { ReactNode } from "react";
+import type { TranslationProvider } from "@/external/providers/types";
 
 export type Translation = Record<string, string>;
 
-export type ProviderId = "google";
+export type ProviderId = "google" | "custom";
 
-export type ProviderConfig = {
-  id: ProviderId;
-  apiKey?: string;
-  endpoint?: string;
-  projectId?: string;
-  region?: string;
-  headers?: Record<string, string>;
+type GoogleProviderConfig = {
+  readonly id: "google";
+  readonly apiKey?: string;
+  readonly endpoint?: string;
+  readonly projectId?: string;
+  readonly region?: string;
+  readonly headers?: Record<string, string>;
 };
+
+type CustomProviderFactory = () => TranslationProvider;
+
+type CustomProviderConfig = {
+  readonly id: "custom";
+  readonly implementation?: TranslationProvider;
+  readonly factory?: CustomProviderFactory;
+  readonly options?: Record<string, unknown>;
+};
+
+export type ProviderConfig = GoogleProviderConfig | CustomProviderConfig;
 
 export type ProviderError = {
   code: string;

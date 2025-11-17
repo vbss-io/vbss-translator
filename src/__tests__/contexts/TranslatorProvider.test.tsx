@@ -383,7 +383,7 @@ describe("TranslatorProvider", () => {
         </TranslatorProvider>
       );
       const { result } = renderHook(() => useTranslatorContext(), { wrapper });
-      expect(result.current.externalConfig.enabled).toBe(true);
+      expect(result.current.externalConfig.enabled).toBe(false);
       expect(result.current.externalConfig.timeoutMs).toBe(5_000);
       expect(result.current.externalConfig.provider).toEqual({ id: "google" });
       expect(result.current.externalConfig.cache).toEqual({

@@ -10,7 +10,7 @@ import {
 import { TranslatorContext } from "@/contexts/TranslatorContext";
 import { ExternalTranslationManager } from "@/external/ExternalTranslationManager";
 import { TranslationCache } from "@/external/cache/TranslationCache";
-import { GoogleTranslateProvider } from "@/external/providers/googleTranslateProvider";
+import { createTranslationProvider } from "@/external/providers/factory";
 import type { TranslationStatus } from "@/external/types";
 import type { ExternalTranslationConfigInput } from "@/types";
 import {
@@ -101,7 +101,7 @@ const resolveExternalTranslationConfig = (
     ...callbacks
   } = input ?? {};
   return {
-    enabled: enabled ?? true,
+    enabled: enabled ?? false,
     timeoutMs: timeoutMs ?? DEFAULT_TIMEOUT_MS,
     debug: debug ?? false,
     provider: {
@@ -215,16 +215,52 @@ export const TranslatorProvider = ({
     [externalConfig.cache]
   );
 
-  const translationManager = useMemo(
-    () =>
-      new ExternalTranslationManager({
-        provider: new GoogleTranslateProvider(externalConfig.provider),
-        config: externalConfig,
-        cache: externalConfig.cache.enabled ? translationCache : undefined,
-        logger: externalLogger,
-      }),
-    [externalConfig, externalLogger, translationCache]
-  );
+  const translationManager = useMemo(() => {
+    let provider;
+    try {
+      provider = createTranslationProvider(externalConfig.provider);
+
+      if (externalConfig.debug) {
+        logDebug("TranslatorProvider_provider_created", {
+          providerType: provider.type,
+          providerId: externalConfig.provider.id,
+          timestamp: Date.now(),
+        });
+      }
+
+      if (provider.isAvailable) {
+        const availability = provider.isAvailable();
+        if (!availability.available) {
+          logWarning("TranslatorProvider_provider_unavailable", {
+            providerType: provider.type,
+            providerId: externalConfig.provider.id,
+            reason: availability.reason,
+            timestamp: Date.now(),
+          });
+        } else if (externalConfig.debug) {
+          logDebug("TranslatorProvider_provider_available", {
+            providerType: provider.type,
+            providerId: externalConfig.provider.id,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    } catch (error) {
+      logWarning("TranslatorProvider_provider_creation_failed", {
+        providerId: externalConfig.provider.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: Date.now(),
+      });
+      throw error;
+    }
+
+    return new ExternalTranslationManager({
+      provider,
+      config: externalConfig,
+      cache: externalConfig.cache.enabled ? translationCache : undefined,
+      logger: externalLogger,
+    });
+  }, [externalConfig, externalLogger, translationCache]);
 
   const [externalState, setExternalState] = useState<ExternalStateMap>(
     () => new Map()

@@ -18,7 +18,9 @@ describe("GoogleTranslateProvider", () => {
     return post;
   };
 
-  const createProvider = (config?: Partial<ProviderConfig>) => {
+  const createProvider = (
+    config?: Partial<Omit<Extract<ProviderConfig, { id: "google" }>, "id">>
+  ) => {
     mockedAxios.create.mockClear();
     return new GoogleTranslateProvider({
       id: "google",

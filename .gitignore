@@ -36,4 +36,5 @@ templates/
 tasks/
 docs/
 prompts/
+CLAUDE.md
 project-base.md

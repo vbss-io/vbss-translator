@@ -42,7 +42,7 @@ describe("useTranslator", () => {
     expect(result.current.isTranslating).toEqual({});
     expect(result.current.isTranslatingAny).toBe(false);
     expect(typeof result.current.registerExternalKey).toBe("function");
-    expect(result.current.externalConfig.enabled).toBe(true);
+    expect(result.current.externalConfig.enabled).toBe(false);
   });
 
   it("should allow registering external keys through the hook", () => {
