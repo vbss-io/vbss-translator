@@ -1,6 +1,6 @@
 {
   "name": "vbss-translator",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A lightweight React translation toolkit focused on ergonomics, sensible defaults, and escape hatches when local dictionaries are not enough",
   "keywords": [
     "react",

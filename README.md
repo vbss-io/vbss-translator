@@ -146,10 +146,6 @@ const externalTranslation = {
     ttlMs: 30 * 60 * 1000,
     maxEntries: 500,
   },
-  glossary: {
-    // Optional terminology map forwarded to providers that support glossaries
-    BRAND_A: "Marca A",
-  },
   alwaysExternalKeys: ["product.description"],
   shouldTranslate: ({ key, text }) => !text.includes("SECRET"),
   onExternalTranslation: ({ key, text }) => {
@@ -172,8 +168,7 @@ const externalTranslation = {
 | `debug` | `boolean` | `false` | Emits structured logs for cache hits, deduped requests, retries, etc. |
 | `provider` | `ProviderConfig` | `{ id: "google" }` | Google or custom provider config. See provider sections below. |
 | `cache` | `CacheConfig` | `{ enabled: false, ttlMs: 3_600_000 }` | In-memory cache with TTL and optional LRU size limit (`maxEntries`). |
-| `glossary` | `Record<string, string>` | `undefined` | Optional term overrides sent when the provider supports them. |
-| `alwaysExternalKeys` | `ReadonlySet` | `new Set()` | Automatically merged with strings registered at runtime. |
+| `alwaysExternalKeys` | `ReadonlyArray<string> \| ReadonlySet<string>` | `new Set()` | Automatically merged with strings registered at runtime. |
 | `shouldTranslate` | `(request) => boolean` | `undefined` | Synchronous guard invoked before caching/dedup. Exceptions default to `true`. |
 | `onExternalTranslation` | `(request) => void \| boolean` | `undefined` | Async-friendly hook after `shouldTranslate` but before the network call. Returning `false` cancels the request. |
 | `onTranslationError` | `(event) => void` | `undefined` | Receives normalized provider errors with retry metadata. |
@@ -197,15 +192,13 @@ Supply either an `implementation` (a pre-built provider instance) or a `factory`
 import {
   TranslatorProvider,
   type TranslationProvider,
-  type TranslateRequest,
-  type TranslateResult,
 } from "vbss-translator";
 
 // Custom provider implementation
 const myCustomProvider: TranslationProvider = {
   type: "custom",
-  checkAvailability: async () => ({ available: true }),
-  translate: async (request: TranslateRequest): Promise<TranslateResult> => {
+  isAvailable: () => ({ available: true }),
+  translate: async (request) => {
     // Your custom translation logic here
     const response = await fetch("https://my-translation-api.com/translate", {
       method: "POST",
@@ -250,13 +243,13 @@ const providerFactory = () => {
 
   return {
     type: "custom",
-    checkAvailability: async () => {
+    isAvailable: () => {
       if (!apiKey || !endpoint) {
         return { available: false, reason: "Missing configuration" };
       }
       return { available: true };
     },
-    translate: async (request: TranslateRequest): Promise<TranslateResult> => {
+    translate: async (request) => {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -299,16 +292,19 @@ Your implementation must satisfy the `TranslationProvider` interface:
 
 ```typescript
 interface TranslationProvider {
-  type: string;
-  checkAvailability: () => Promise<ProviderAvailability>;
-  translate: (request: TranslateRequest) => Promise<TranslateResult>;
+  type: ProviderId;
+  translate: (
+    request: TranslateRequest,
+    options?: TranslationProviderTranslateOptions
+  ) => Promise<TranslateResult>;
+  isAvailable?: () => ProviderAvailability;
   normalizeError?: (error: unknown) => ProviderError;
 }
 ```
 
-- `type`: String identifier for your provider (typically `"custom"`).
-- `checkAvailability`: Validates provider readiness (e.g., credentials, network).
-- `translate`: Accepts `TranslateRequest` (text, source/target languages, optional glossary) and returns `TranslateResult` (translated text, optional metadata).
+- `type`: Provider identifier (`"google"` or `"custom"`).
+- `translate`: Accepts `TranslateRequest` (text, source/target languages, optional glossary) plus optional `TranslationProviderTranslateOptions` (`signal`, `timeoutMs`, `headers`) and returns `TranslateResult` (translated text, optional metadata).
+- `isAvailable` (optional): Synchronously validates provider readiness (e.g., credentials, network).
 - `normalizeError` (optional): Converts provider-specific errors into structured `ProviderError` with retryable flags.
 
 #### Switching Between Providers
@@ -350,7 +346,7 @@ const activeConfig = useGoogleTranslate ? googleConfig : customConfig;
 Validate your custom provider before production:
 
 ```typescript
-import { createTranslationProvider } from "vbss-translator/factory";
+import { createTranslationProvider } from "vbss-translator";
 
 const provider = createTranslationProvider({
   id: "custom",
@@ -358,8 +354,8 @@ const provider = createTranslationProvider({
 });
 
 // Test availability
-const availability = await provider.checkAvailability();
-console.log("Provider available:", availability.available);
+const availability = provider.isAvailable?.();
+console.log("Provider available:", availability?.available);
 
 // Test translation
 const result = await provider.translate({
