@@ -128,11 +128,13 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         external: [
-          "react", 
+          "react",
           "react-dom",
+          "react/jsx-runtime",
+          "react/jsx-dev-runtime",
           /^node:/,
           "fs",
-          "fs/promises", 
+          "fs/promises",
           "path",
           "glob"
         ],
@@ -140,6 +142,8 @@ export default defineConfig(({ mode }) => {
           globals: {
             react: "React",
             "react-dom": "ReactDOM",
+            "react/jsx-runtime": "ReactJSXRuntime",
+            "react/jsx-dev-runtime": "ReactJSXDevRuntime",
           },
         },
       },

@@ -20,13 +20,13 @@
   "files": [
     "dist"
   ],
-  "main": "dist/vbss-translator-umd.cjs",
+  "main": "dist/vbss-translator.umd.cjs",
   "module": "dist/vbss-translator.js",
   "exports": {
     ".": {
       "types": "./dist/vbss-translator.d.ts",
       "import": "./dist/vbss-translator.js",
-      "require": "./dist/vbss-translator-umd.cjs"
+      "require": "./dist/vbss-translator.umd.cjs"
     },
     "./generator": {
       "types": "./dist/generator.d.ts",
