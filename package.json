@@ -17,6 +17,16 @@
   "private": false,
   "type": "module",
   "license": "MIT",
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/vbss-io"
+    },
+    {
+      "type": "individual",
+      "url": "https://buymeacoffee.com/vbss.io"
+    }
+  ],
   "files": [
     "dist"
   ],

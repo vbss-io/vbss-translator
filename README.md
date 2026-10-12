@@ -7,6 +7,7 @@ A lightweight React translation toolkit focused on ergonomics, sensible defaults
 Help us keep vbss-translator free and maintained:
 
 - Buy me a coffee: [buymeacoffee.com/vbss.io](https://www.buymeacoffee.com/vbss.io)
+- GitHub Sponsors: [github.com/sponsors/vbss-io](https://github.com/sponsors/vbss-io)
 - Star on GitHub: [github.com/vbss-io/vbss-translator](https://github.com/vbss-io/vbss-translator)
 - Share the tool: [ui.vbss.io/tools/vbss-translator](https://ui.vbss.io/tools/vbss-translator)
 
