@@ -46,17 +46,17 @@ describe("Watch Service Integration Tests", () => {
   });
 
   afterEach(async () => {
+    if (watchServicePromise) {
+      process.emit("SIGTERM", "SIGTERM");
+      watchServicePromise = null;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
     jest.restoreAllMocks();
     if (originalExit) {
       process.exit = originalExit;
     }
     process.removeAllListeners("SIGINT");
     process.removeAllListeners("SIGTERM");
-    if (watchServicePromise) {
-      process.emit("SIGTERM", "SIGTERM");
-      watchServicePromise = null;
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
     process.chdir(originalCwd);
     if (existsSync(testDir)) {
       await rm(testDir, { recursive: true, force: true });
