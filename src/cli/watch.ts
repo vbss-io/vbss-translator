@@ -1,5 +1,5 @@
 import { watch, existsSync } from "fs";
-import { glob } from "glob";
+import { findFiles } from "./discover";
 import { dirname, resolve, relative, normalize } from "path";
 import { generate } from "./generator";
 import type { WatchService, WatchEvent, GeneratorOptions } from "./types";
@@ -82,7 +82,10 @@ class WatchServiceImpl implements WatchService {
     this.callback = callback;
     this.cwd = normalize(process.cwd());
     this.isWatching = true;
-    const files = await glob(pattern, { cwd: this.cwd, absolute: true });
+    const files = await findFiles(pattern, {
+      cwd: this.cwd,
+      absolute: true,
+    });
     const directories = getUniqueDirectories(files);
     if (directories.length === 0) {
       directories.push(this.cwd);

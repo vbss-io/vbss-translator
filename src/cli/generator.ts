@@ -1,4 +1,4 @@
-import { glob } from "glob";
+import { findFiles } from "./discover";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { dirname, relative, resolve, normalize } from "path";
 import type {
@@ -16,7 +16,10 @@ async function discoverTranslationFiles(
   pattern: string
 ): Promise<DiscoveredFile[]> {
   try {
-    const files = await glob(pattern, { cwd: process.cwd(), absolute: false });
+    const files = await findFiles(pattern, {
+      cwd: process.cwd(),
+      absolute: false,
+    });
     const cwd = process.cwd();
     return files.map((file) => {
       const absolutePath = resolve(cwd, file);

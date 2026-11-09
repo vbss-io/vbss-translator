@@ -7,18 +7,18 @@ import {
   afterEach,
 } from "@jest/globals";
 import { watch } from "fs";
-import { glob } from "glob";
+import { findFiles } from "@/cli/discover";
 import { resolve, dirname } from "path";
 import { WatchServiceImpl } from "@/cli/watch";
 import { generate } from "@/cli/generator";
 import type { GeneratorOptions } from "@/cli/types";
 
 jest.mock("fs");
-jest.mock("glob");
+jest.mock("@/cli/discover");
 jest.mock("@/cli/generator");
 
 const mockWatch = watch as jest.MockedFunction<typeof watch>;
-const mockGlob = glob as jest.MockedFunction<typeof glob>;
+const mockFindFiles = findFiles as jest.MockedFunction<typeof findFiles>;
 const mockGenerate = generate as jest.MockedFunction<typeof generate>;
 
 describe("WatchService", () => {
@@ -78,7 +78,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -97,7 +97,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -115,7 +115,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -135,7 +135,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -160,7 +160,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -184,7 +184,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -203,7 +203,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -222,7 +222,7 @@ describe("WatchService", () => {
         resolve(process.cwd(), "src/components/translations.json"),
         resolve(process.cwd(), "src/pages/translations.json"),
       ];
-      mockGlob.mockResolvedValueOnce(absolutePaths);
+      mockFindFiles.mockResolvedValueOnce(absolutePaths);
       watchService.setGeneratorOptions({
         ...defaultOptions,
         pattern: "src/**/translations.json",
@@ -241,7 +241,7 @@ describe("WatchService", () => {
 
   describe("Cleanup on stop", () => {
     it("should close all watchers on stop", async () => {
-      mockGlob.mockResolvedValueOnce([
+      mockFindFiles.mockResolvedValueOnce([
         "src/components/translations.json",
         "src/pages/translations.json",
       ]);
@@ -257,7 +257,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       jest.useFakeTimers();
@@ -284,7 +284,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const consoleErrorSpy = jest
         .spyOn(console, "error")
@@ -306,7 +306,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       mockGenerate.mockResolvedValueOnce({
         success: false,
@@ -341,7 +341,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       mockGenerate.mockRejectedValueOnce(new Error("Generation failed"));
       const consoleErrorSpy = jest
@@ -362,7 +362,7 @@ describe("WatchService", () => {
 
   describe("Multiple directories", () => {
     it("should watch multiple directories", async () => {
-      mockGlob.mockResolvedValueOnce([
+      mockFindFiles.mockResolvedValueOnce([
         "src/components/translations.json",
         "src/pages/translations.json",
         "src/utils/translations.json",
@@ -375,7 +375,7 @@ describe("WatchService", () => {
     });
 
     it("should not create duplicate watchers for the same directory", async () => {
-      mockGlob.mockResolvedValueOnce([
+      mockFindFiles.mockResolvedValueOnce([
         "src/components/translations.json",
         "src/components/other.json",
       ]);
@@ -393,7 +393,7 @@ describe("WatchService", () => {
         process.cwd(),
         "src/components/translations.json"
       );
-      mockGlob.mockResolvedValueOnce([absolutePath]);
+      mockFindFiles.mockResolvedValueOnce([absolutePath]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       await watchService.watch(defaultOptions.pattern, callback);
@@ -403,7 +403,7 @@ describe("WatchService", () => {
     });
 
     it("should handle empty file discovery", async () => {
-      mockGlob.mockResolvedValueOnce([]);
+      mockFindFiles.mockResolvedValueOnce([]);
       watchService.setGeneratorOptions(defaultOptions);
       const callback = jest.fn();
       await watchService.watch(defaultOptions.pattern, callback);

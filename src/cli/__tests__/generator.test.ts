@@ -7,17 +7,17 @@ import {
   afterEach,
 } from "@jest/globals";
 import { readFile, writeFile, mkdir } from "fs/promises";
-import { glob } from "glob";
+import { findFiles } from "@/cli/discover";
 import { generate } from "@/cli/generator";
 import type { GeneratorOptions } from "@/cli/types";
 
 jest.mock("fs/promises");
-jest.mock("glob");
+jest.mock("@/cli/discover");
 
 const mockReadFile = readFile as jest.MockedFunction<typeof readFile>;
 const mockWriteFile = writeFile as jest.MockedFunction<typeof writeFile>;
 const mockMkdir = mkdir as jest.MockedFunction<typeof mkdir>;
-const mockGlob = glob as jest.MockedFunction<typeof glob>;
+const mockFindFiles = findFiles as jest.MockedFunction<typeof findFiles>;
 
 describe("Generator", () => {
   const defaultOptions: GeneratorOptions = {
@@ -37,7 +37,7 @@ describe("Generator", () => {
 
   describe("Empty project", () => {
     it("should return success with zero files when no translation files found", async () => {
-      mockGlob.mockResolvedValueOnce([]);
+      mockFindFiles.mockResolvedValueOnce([]);
       const result = await generate(defaultOptions);
       expect(result).toEqual({
         success: true,
@@ -46,7 +46,7 @@ describe("Generator", () => {
         errors: [],
         outputPath: defaultOptions.outputPath,
       });
-      expect(mockGlob).toHaveBeenCalledWith(defaultOptions.pattern, {
+      expect(mockFindFiles).toHaveBeenCalledWith(defaultOptions.pattern, {
         cwd: process.cwd(),
         absolute: false,
       });
@@ -58,7 +58,7 @@ describe("Generator", () => {
   describe("Single translation file", () => {
     it("should generate index file from single translation file with array", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -78,7 +78,7 @@ describe("Generator", () => {
 
     it("should handle single translation file with single object", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify({ en: "Hello", pt: "Olá" })
       );
@@ -95,7 +95,7 @@ describe("Generator", () => {
     it("should deduplicate translations based on reference language", async () => {
       const file1 = "src/components/translations.json";
       const file2 = "src/pages/translations.json";
-      mockGlob.mockResolvedValueOnce([file1, file2]);
+      mockFindFiles.mockResolvedValueOnce([file1, file2]);
       mockReadFile
         .mockResolvedValueOnce(JSON.stringify([{ en: "Hello", pt: "Olá" }]))
         .mockResolvedValueOnce(
@@ -119,7 +119,7 @@ describe("Generator", () => {
     it("should preserve first occurrence when duplicates found", async () => {
       const file1 = "src/components/translations.json";
       const file2 = "src/pages/translations.json";
-      mockGlob.mockResolvedValueOnce([file1, file2]);
+      mockFindFiles.mockResolvedValueOnce([file1, file2]);
       mockReadFile
         .mockResolvedValueOnce(
           JSON.stringify([{ en: "Hello", pt: "Olá (first)" }])
@@ -140,7 +140,7 @@ describe("Generator", () => {
     it("should fail when files have inconsistent language keys", async () => {
       const file1 = "src/components/translations.json";
       const file2 = "src/pages/translations.json";
-      mockGlob.mockResolvedValueOnce([file1, file2]);
+      mockFindFiles.mockResolvedValueOnce([file1, file2]);
       mockReadFile
         .mockResolvedValueOnce(JSON.stringify([{ en: "Hello", pt: "Olá" }]))
         .mockResolvedValueOnce(JSON.stringify([{ en: "Hello", es: "Hola" }]));
@@ -155,7 +155,7 @@ describe("Generator", () => {
 
     it("should detect languages from first valid file", async () => {
       const file1 = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([file1]);
+      mockFindFiles.mockResolvedValueOnce([file1]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá", es: "Hola" }])
       );
@@ -171,7 +171,7 @@ describe("Generator", () => {
   describe("Malformed JSON handling", () => {
     it("should handle invalid JSON files with clear error messages", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce("{ invalid json }");
       const result = await generate(defaultOptions);
       expect(result.success).toBe(false);
@@ -183,7 +183,7 @@ describe("Generator", () => {
 
     it("should handle files with non-string values", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: 123 }])
       );
@@ -195,7 +195,7 @@ describe("Generator", () => {
 
     it("should handle files with null or array at root level incorrectly", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce("null");
       const result = await generate(defaultOptions);
       expect(result.success).toBe(false);
@@ -210,7 +210,7 @@ describe("Generator", () => {
         "src/components/modal/translations.json",
         "src/pages/home/translations.json",
       ];
-      mockGlob.mockResolvedValueOnce(files);
+      mockFindFiles.mockResolvedValueOnce(files);
       mockReadFile.mockResolvedValue(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -227,7 +227,7 @@ describe("Generator", () => {
   describe("Output formats", () => {
     it("should generate TypeScript code with interfaces", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -243,7 +243,7 @@ describe("Generator", () => {
 
     it("should generate JavaScript code without interfaces", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -259,7 +259,7 @@ describe("Generator", () => {
 
     it("should generate TSX code same as TypeScript", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -279,7 +279,7 @@ describe("Generator", () => {
         "src/components/translations.json",
         "src/pages/home/translations.json",
       ];
-      mockGlob.mockResolvedValueOnce(files);
+      mockFindFiles.mockResolvedValueOnce(files);
       mockReadFile.mockResolvedValue(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -296,7 +296,7 @@ describe("Generator", () => {
 
     it("should handle same directory imports", async () => {
       const files = ["src/translations/en.json"];
-      mockGlob.mockResolvedValueOnce(files);
+      mockFindFiles.mockResolvedValueOnce(files);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -315,7 +315,7 @@ describe("Generator", () => {
   describe("File system error handling", () => {
     it("should handle file read errors gracefully", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       const readError = new Error("Permission denied") as NodeJS.ErrnoException;
       readError.code = "EACCES";
       mockReadFile.mockRejectedValueOnce(readError);
@@ -327,7 +327,7 @@ describe("Generator", () => {
 
     it("should handle directory creation errors", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([{ en: "Hello", pt: "Olá" }])
       );
@@ -344,7 +344,7 @@ describe("Generator", () => {
 
     it("should handle glob errors gracefully", async () => {
       const globError = new Error("Invalid pattern");
-      mockGlob.mockRejectedValueOnce(globError);
+      mockFindFiles.mockRejectedValueOnce(globError);
       const result = await generate(defaultOptions);
       expect(result.success).toBe(false);
       expect(result.errors.some((e) => e.type === "file_system")).toBe(true);
@@ -354,7 +354,7 @@ describe("Generator", () => {
   describe("Edge cases", () => {
     it("should handle files with multiple translations per file", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([
           { en: "Hello", pt: "Olá" },
@@ -370,7 +370,7 @@ describe("Generator", () => {
     it("should use first language as reference if not specified", async () => {
       const file1 = "src/components/translations.json";
       const file2 = "src/pages/translations.json";
-      mockGlob.mockResolvedValueOnce([file1, file2]);
+      mockFindFiles.mockResolvedValueOnce([file1, file2]);
       mockReadFile
         .mockResolvedValueOnce(JSON.stringify([{ pt: "Olá", en: "Hello" }]))
         .mockResolvedValueOnce(JSON.stringify([{ pt: "Olá", en: "Hello" }]));
@@ -385,7 +385,7 @@ describe("Generator", () => {
 
     it("should handle empty translation arrays", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(JSON.stringify([]));
       const result = await generate(defaultOptions);
       expect(result.success).toBe(false);
@@ -396,7 +396,7 @@ describe("Generator", () => {
   describe("Multiple translations validation within file", () => {
     it("should validate all translations in a file have same language keys", async () => {
       const translationFile = "src/components/translations.json";
-      mockGlob.mockResolvedValueOnce([translationFile]);
+      mockFindFiles.mockResolvedValueOnce([translationFile]);
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify([
           { en: "Hello", pt: "Olá" },
