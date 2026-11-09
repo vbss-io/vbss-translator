@@ -31,7 +31,6 @@ export default defineConfig(({ mode }) => {
                 "stream",
                 "string_decoder",
                 "url",
-                "glob",
               ].includes(id)
             ) {
               return true;
@@ -49,9 +48,6 @@ export default defineConfig(({ mode }) => {
               "crypto",
             ];
             if (nodeBuiltins.includes(id)) {
-              return true;
-            }
-            if (id === "glob" || id.startsWith("glob/")) {
               return true;
             }
             return false;
@@ -88,8 +84,7 @@ export default defineConfig(({ mode }) => {
             /^node:/,
             "fs",
             "fs/promises", 
-            "path",
-            "glob"
+            "path"
           ],
           output: [
             {
@@ -135,8 +130,7 @@ export default defineConfig(({ mode }) => {
           /^node:/,
           "fs",
           "fs/promises",
-          "path",
-          "glob"
+          "path"
         ],
         output: {
           globals: {
