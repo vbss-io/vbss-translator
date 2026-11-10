@@ -34,8 +34,6 @@ const DEFAULT_ENDPOINT =
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-const toBoolean = (value: unknown): boolean => Boolean(value);
-
 const isAxiosError = <T = unknown>(error: unknown): error is AxiosError<T> => {
   return axios.isAxiosError(error);
 };
@@ -56,12 +54,20 @@ export class GoogleTranslateProvider implements TranslationProvider {
   }
 
   public isAvailable(): ProviderAvailability {
-    if (this.config.apiKey || toBoolean(this.config.headers)) {
+    const { apiKey, headers, endpoint } = this.config;
+    const hasCredentials =
+      Boolean(apiKey) ||
+      (headers !== undefined && Object.keys(headers).length > 0) ||
+      (endpoint !== undefined && endpoint !== DEFAULT_ENDPOINT);
+
+    if (hasCredentials) {
       return { available: true };
     }
 
     return {
-      available: true,
+      available: false,
+      reason:
+        "Google Translate requires an apiKey, authentication headers or a custom endpoint",
     };
   }
 

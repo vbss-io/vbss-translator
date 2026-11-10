@@ -82,14 +82,43 @@ describe("GoogleTranslateProvider behavior", () => {
     });
   });
 
-  it("reports itself as available when credentials are configured", () => {
-    expect(setup({ id: "google", apiKey: "k" }).provider.isAvailable()).toEqual({
-      available: true,
+  describe("availability", () => {
+    it("is available with an api key", () => {
+      expect(
+        setup({ id: "google", apiKey: "k" }).provider.isAvailable()
+      ).toEqual({ available: true });
     });
-    expect(
-      setup({ id: "google", headers: { Authorization: "Bearer x" } }).provider
-        .isAvailable()
-    ).toEqual({ available: true });
+
+    it("is available with non-empty headers", () => {
+      expect(
+        setup({ id: "google", headers: { Authorization: "Bearer x" } }).provider
+          .isAvailable()
+      ).toEqual({ available: true });
+    });
+
+    it("is available with a custom endpoint", () => {
+      expect(
+        setup({ id: "google", endpoint: "https://proxy.example.com/translate" })
+          .provider.isAvailable()
+      ).toEqual({ available: true });
+    });
+
+    it("is unavailable without an api key, headers or a custom endpoint", () => {
+      const availability = setup({ id: "google" }).provider.isAvailable();
+      expect(availability.available).toBe(false);
+      expect(availability.reason).toMatch(/apiKey|credential/i);
+    });
+
+    it("is unavailable with empty headers, an empty api key and the default endpoint", () => {
+      const availability = setup({
+        id: "google",
+        apiKey: "",
+        headers: {},
+        endpoint: DEFAULT_ENDPOINT,
+      }).provider.isAvailable();
+      expect(availability.available).toBe(false);
+      expect(availability.reason).toEqual(expect.any(String));
+    });
   });
 
   describe("translate request", () => {
