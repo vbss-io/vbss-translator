@@ -7,6 +7,13 @@ const DEFAULT_OUTPUT_PATH = "src/translations/index.ts";
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = "ts";
 const OUTPUT_FORMATS: readonly OutputFormat[] = ["ts", "js", "tsx"];
 
+export class CliUsageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CliUsageError";
+  }
+}
+
 const isOutputFormat = (value: string): value is OutputFormat =>
   OUTPUT_FORMATS.some((format) => format === value);
 
@@ -43,7 +50,7 @@ class ConfigLoaderImpl implements ConfigLoader {
     }
     if (typeof args.format === "string") {
       if (!isOutputFormat(args.format)) {
-        throw new Error(
+        throw new CliUsageError(
           `Invalid --format value "${args.format}". Accepted formats: ${OUTPUT_FORMATS.join(", ")}`
         );
       }

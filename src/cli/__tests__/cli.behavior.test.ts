@@ -20,6 +20,7 @@ jest.mock("@/cli/config", () => {
     "@/cli/config"
   );
   return {
+    CliUsageError: actual.CliUsageError,
     configLoader: {
       loadFromFile: jest.fn(),
       loadFromArgs: actual.configLoader.loadFromArgs.bind(actual.configLoader),
@@ -354,6 +355,12 @@ describe("cli main behavior", () => {
       expect(output(error)).toContain("ts, js, tsx");
       expect(exit).toHaveBeenCalledWith(1);
       expect(mockGenerate).not.toHaveBeenCalled();
+    });
+
+    it("prints only the message, without a stack trace, for an invalid format", async () => {
+      await run("--format", "json");
+      expect(output(error)).toContain("ts, js, tsx");
+      expect(output(error)).not.toContain("Stack trace:");
     });
   });
 

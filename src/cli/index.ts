@@ -2,7 +2,7 @@
 
 import { resolve } from "path";
 import { generate } from "@/cli/generator";
-import { configLoader } from "@/cli/config";
+import { CliUsageError, configLoader } from "@/cli/config";
 import { startWatch } from "@/cli/watch";
 import type { Config, GeneratorOptions } from "@/cli/types";
 
@@ -191,7 +191,7 @@ async function main(): Promise<void> {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
     console.error(formatError(errorMessage));
-    if (error instanceof Error && error.stack) {
+    if (error instanceof Error && error.stack && !(error instanceof CliUsageError)) {
       console.error(`${COLORS.red}Stack trace:${COLORS.reset}`);
       console.error(error.stack);
     }
