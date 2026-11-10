@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "package": "glob",
+    "version": "14.0.2",
+    "reason": "approved by the repo owner on 2026-11-10 after audit (same publisher, signatures, tag == gitHead, no advisories) to close GHSA-3g3m-2fjr-6pw4 / GHSA-g3hv-75wg-m249 hours before the 14-day window",
+    "until": "2026-11-11"
+  },
+  {
+    "package": "minimatch",
+    "version": "11.0.1",
+    "reason": "approved by the repo owner on 2026-11-10 after audit (same publisher, signatures, tag == gitHead, no advisories) to close GHSA-3g3m-2fjr-6pw4 / GHSA-g3hv-75wg-m249 hours before the 14-day window",
+    "until": "2026-11-11"
+  },
+  {
+    "package": "path-scurry",
+    "version": "3.0.0",
+    "reason": "approved by the repo owner on 2026-11-10 after audit (same publisher, signatures, tag == gitHead, no advisories) to close GHSA-3g3m-2fjr-6pw4 / GHSA-g3hv-75wg-m249 hours before the 14-day window",
+    "until": "2026-11-11"
+  }
+]
