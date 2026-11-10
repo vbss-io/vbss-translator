@@ -377,11 +377,6 @@ export async function generate(
       outputPath: options.outputPath,
     };
   }
-  for (const file of discoveredFiles) {
-    if (file.error) {
-      errors.push(file.error);
-    }
-  }
   const readFiles = await readTranslationFiles(discoveredFiles);
   for (const file of readFiles) {
     if (file.error) {

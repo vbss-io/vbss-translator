@@ -144,6 +144,19 @@ describe("generate behavior", () => {
       });
     });
 
+    it("reports a discovery failure exactly once", async () => {
+      mockFindFiles.mockRejectedValueOnce(new Error("bad pattern"));
+      const result = await generate(options);
+      expect(result.errors).toEqual([
+        {
+          file: options.pattern,
+          message: "Failed to discover files: bad pattern",
+          type: "file_system",
+        },
+      ]);
+      expect(mockWriteFile).not.toHaveBeenCalled();
+    });
+
     it("reports Unknown error for a non Error discovery failure", async () => {
       mockFindFiles.mockRejectedValueOnce("boom");
       const result = await generate(options);
