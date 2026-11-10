@@ -50,6 +50,15 @@ type ExternalStateMap = Map<string, Map<string, ExternalTranslationState>>;
 
 type TranslationEntry = TranslatorProviderType["translations"][number];
 
+type ExternalTranslationParams = {
+  readonly key: string;
+  readonly targetLanguage: string;
+  readonly originalText: string;
+  readonly displayValue: string;
+  readonly sourceLanguage?: string;
+  readonly options?: TranslateOptions;
+};
+
 const toReadonlySet = (
   entries?: ReadonlyArray<string> | ReadonlySet<string>
 ) => {
@@ -225,7 +234,7 @@ export const TranslatorProvider = ({
         });
       }
 
-      if (provider.isAvailable) {
+      if (externalConfig.enabled && provider.isAvailable) {
         const availability = provider.isAvailable();
         if (!availability.available) {
           logWarning("TranslatorProvider_provider_unavailable", {
@@ -287,9 +296,9 @@ export const TranslatorProvider = ({
     (
       targetLanguage: string,
       key: string,
-      entry: ExternalTranslationState | undefined
+      entry: ExternalTranslationState
     ) => {
-      if (externalConfig.debug && entry) {
+      if (externalConfig.debug) {
         logDebug("setExternalStateEntry_called", {
           targetLanguage,
           key,
@@ -302,20 +311,11 @@ export const TranslatorProvider = ({
         setExternalState((previous) => {
           const next = new Map(previous);
           const mapForLanguage = toMapCopy(next.get(targetLanguage));
-          if (entry) {
-            mapForLanguage.set(key, entry);
-            next.set(targetLanguage, mapForLanguage);
-          } else {
-            mapForLanguage.delete(key);
-            if (mapForLanguage.size > 0) {
-              next.set(targetLanguage, mapForLanguage);
-            } else {
-              next.delete(targetLanguage);
-            }
-          }
+          mapForLanguage.set(key, entry);
+          next.set(targetLanguage, mapForLanguage);
           return next;
         });
-        if (entry?.status === "resolved") {
+        if (entry.status === "resolved") {
           if (externalConfig.debug) {
             logDebug("forceUpdate_triggered", {
               targetLanguage,
@@ -340,21 +340,23 @@ export const TranslatorProvider = ({
     [externalConfig, forceUpdate]
   );
 
+  const scheduledRef = useRef<Set<string>>(new Set());
+
   const startExternalTranslation = useCallback(
-    (params: {
-      key: string;
-      targetLanguage: string;
-      originalText: string;
-      displayValue: string;
-      sourceLanguage?: string;
-      options?: TranslateOptions;
-    }) => {
+    (params: ExternalTranslationParams) => {
       if (!translationManager.isEnabled()) {
         return;
       }
-      setExternalStateEntry(params.targetLanguage, params.key, {
-        status: "pending",
-        value: params.displayValue,
+      const recordKey = createRecordKey(params.key, params.targetLanguage);
+      if (scheduledRef.current.has(recordKey)) {
+        return;
+      }
+      scheduledRef.current.add(recordKey);
+      void Promise.resolve().then(() => {
+        setExternalStateEntry(params.targetLanguage, params.key, {
+          status: "pending",
+          value: params.displayValue,
+        });
       });
       void translationManager
         .translate({
@@ -423,6 +425,11 @@ export const TranslatorProvider = ({
             error,
             retryAt: Date.now() + ERROR_RETRY_DELAY_MS,
           });
+        })
+        .finally(() => {
+          scheduledRef.current.delete(
+            createRecordKey(params.key, params.targetLanguage)
+          );
         });
     },
     [externalConfig, setExternalStateEntry, translationManager]
@@ -526,13 +533,8 @@ export const TranslatorProvider = ({
           options,
         });
       }
-      const latestState =
-        externalState.get(language)?.get(text) ?? existingState;
-      if (latestState?.status === "resolved" && latestState.value) {
-        return latestState.value;
-      }
-      if (latestState?.status === "pending") {
-        return latestState.value ?? fallbackValue;
+      if (existingState?.status === "pending") {
+        return existingState.value ?? fallbackValue;
       }
       return fallbackValue;
     },

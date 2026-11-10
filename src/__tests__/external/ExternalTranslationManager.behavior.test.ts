@@ -526,9 +526,9 @@ describe("ExternalTranslationManager behavior", () => {
 
     it("enforces the timeout when the provider ignores the signal and never settles", async () => {
       jest.useFakeTimers();
-      const translate: TranslateMock = jest.fn(
-        () => new Promise<TranslateResult>(() => {})
-      );
+      const translate: TranslateMock = jest
+        .fn()
+        .mockReturnValue(new Promise<TranslateResult>(() => {}));
       const onTranslationError = jest.fn();
       const manager = new ExternalTranslationManager({
         provider: provider(translate),

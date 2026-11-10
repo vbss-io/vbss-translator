@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import { TranslatorProvider } from "@/contexts/TranslatorProvider";
 import { useTranslatorContext } from "@/contexts/TranslatorContext";
 import type {
@@ -93,15 +93,22 @@ describe("TranslatorProvider with a real manager and a faked provider", () => {
 
   describe("resolution flow", () => {
     it("shows the original text while pending and the translation once resolved", async () => {
-      const translate = resolvingTranslate("Hello world");
+      let finish: (value: TranslateResult) => void = () => {};
+      const translate: TranslateFn = jest.fn().mockImplementation(
+        () =>
+          new Promise<TranslateResult>((resolve) => {
+            finish = resolve;
+          })
+      );
       const { result } = renderProvider(enabled(customProvider(translate)));
       let first = "";
-      act(() => {
+      await act(async () => {
         first = result.current.t("Unknown key");
       });
       expect(first).toBe("Unknown key");
       expect(result.current.isTranslating["Unknown key::pt"]).toBe(true);
       expect(result.current.isTranslatingAny).toBe(true);
+      finish({ translatedText: "Hello world" });
       await settle();
       expect(result.current.isTranslating["Unknown key::pt"]).toBe(false);
       expect(result.current.isTranslatingAny).toBe(false);
@@ -366,7 +373,7 @@ describe("TranslatorProvider with a real manager and a faked provider", () => {
         .fn()
         .mockReturnValue(new Promise<TranslateResult>(() => {}));
       const { result } = renderProvider(enabled(customProvider(translate)));
-      act(() => {
+      await act(async () => {
         result.current.t("Hello", { preferExternal: true, fallbackValue: "Wait" });
       });
       let plain = "";
@@ -466,6 +473,65 @@ describe("TranslatorProvider with a real manager and a faked provider", () => {
       expect(translate).not.toHaveBeenCalled();
       expect(result.current.t("Unknown key")).toBe("Unknown key");
       expect(result.current.isTranslatingAny).toBe(false);
+    });
+  });
+
+  describe("translation requested during render", () => {
+    const Probe = ({ text, testId }: { text: string; testId: string }) => {
+      const { t } = useTranslatorContext();
+      return <span data-testid={testId}>{t(text)}</span>;
+    };
+
+    const renderProbes = (
+      translate: TranslateFn,
+      probes: ReadonlyArray<{ text: string; testId: string }>
+    ) =>
+      render(
+        <TranslatorProvider
+          translations={translations}
+          defaultLanguage="pt"
+          externalTranslation={enabled(customProvider(translate))}
+        >
+          {probes.map((probe) => (
+            <Probe key={probe.testId} {...probe} />
+          ))}
+        </TranslatorProvider>
+      );
+
+    const renderUpdateWarnings = (spy: jest.SpyInstance) =>
+      spy.mock.calls.filter((call) =>
+        String(call[0]).includes("Cannot update a component")
+      );
+
+    it("does not update the provider state while a child renders and still delivers the translation", async () => {
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const translate = resolvingTranslate("Traduzido");
+      renderProbes(translate, [{ text: "Unknown key", testId: "probe" }]);
+      expect(screen.getByTestId("probe").textContent).toBe("Unknown key");
+      await settle();
+      expect(renderUpdateWarnings(consoleError)).toHaveLength(0);
+      expect(screen.getByTestId("probe").textContent).toBe("Traduzido");
+      expect(translate).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps deduplicating the same key requested by several components in one render", async () => {
+      const consoleError = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const translate = resolvingTranslate("Traduzido");
+      renderProbes(translate, [
+        { text: "Unknown key", testId: "first" },
+        { text: "Unknown key", testId: "second" },
+        { text: "Other key", testId: "third" },
+      ]);
+      await settle();
+      expect(renderUpdateWarnings(consoleError)).toHaveLength(0);
+      expect(screen.getByTestId("first").textContent).toBe("Traduzido");
+      expect(screen.getByTestId("second").textContent).toBe("Traduzido");
+      expect(screen.getByTestId("third").textContent).toBe("Traduzido");
+      expect(translate).toHaveBeenCalledTimes(2);
     });
   });
 

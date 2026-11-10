@@ -57,6 +57,11 @@ describe("TranslatorProvider with the google provider", () => {
     );
   });
 
+  it("does not warn about availability while external translation is disabled", () => {
+    renderWith({ provider: { id: "google" } });
+    expect(unavailableEvents(warn)).toHaveLength(0);
+  });
+
   it("does not warn when google has an api key", () => {
     renderWith({ enabled: true, provider: { id: "google", apiKey: "k" } });
     expect(unavailableEvents(warn)).toHaveLength(0);
