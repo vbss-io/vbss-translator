@@ -199,12 +199,18 @@ async function main(): Promise<void> {
   }
 }
 
+function isDirectExecution(argv1: string | undefined): boolean {
+  if (!argv1) {
+    return false;
+  }
+  const normalized = argv1.split("\\").join("/");
+  return (
+    normalized.includes("cli/index") || normalized.includes("vbss-translator")
+  );
+}
+
 if (!process.env.JEST_WORKER_ID) {
-  const isDirectExecution =
-    process.argv[1] &&
-    (process.argv[1].includes("cli/index") ||
-      process.argv[1].includes("vbss-translator"));
-  if (isDirectExecution) {
+  if (isDirectExecution(process.argv[1])) {
     main().catch((error) => {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -214,4 +220,4 @@ if (!process.env.JEST_WORKER_ID) {
   }
 }
 
-export { main };
+export { main, isDirectExecution };

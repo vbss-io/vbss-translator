@@ -110,12 +110,16 @@ describe("ConfigLoader", () => {
       });
     });
 
-    it("should ignore invalid format values", () => {
-      const args = {
-        format: "invalid",
-      };
-      const result = configLoader.loadFromArgs(args);
-      expect(result).toEqual({});
+    it("should reject invalid format values and list the accepted ones", () => {
+      expect(() => configLoader.loadFromArgs({ format: "invalid" })).toThrow(
+        'Invalid --format value "invalid". Accepted formats: ts, js, tsx'
+      );
+    });
+
+    it("should reject an empty format value", () => {
+      expect(() => configLoader.loadFromArgs({ format: "" })).toThrow(
+        "Accepted formats: ts, js, tsx"
+      );
     });
 
     it("should accept valid format values (ts, js, tsx)", () => {

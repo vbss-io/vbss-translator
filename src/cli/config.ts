@@ -5,6 +5,10 @@ import type { Config, ConfigLoader, OutputFormat } from "./types";
 const DEFAULT_PATTERN = "src/**/translations.json";
 const DEFAULT_OUTPUT_PATH = "src/translations/index.ts";
 const DEFAULT_OUTPUT_FORMAT: OutputFormat = "ts";
+const OUTPUT_FORMATS: readonly OutputFormat[] = ["ts", "js", "tsx"];
+
+const isOutputFormat = (value: string): value is OutputFormat =>
+  OUTPUT_FORMATS.some((format) => format === value);
 
 class ConfigLoaderImpl implements ConfigLoader {
   async loadFromFile(path: string): Promise<Config | null> {
@@ -37,10 +41,12 @@ class ConfigLoaderImpl implements ConfigLoader {
     if (typeof args.output === "string") {
       config.outputPath = args.output;
     }
-    if (
-      typeof args.format === "string" &&
-      (args.format === "ts" || args.format === "js" || args.format === "tsx")
-    ) {
+    if (typeof args.format === "string") {
+      if (!isOutputFormat(args.format)) {
+        throw new Error(
+          `Invalid --format value "${args.format}". Accepted formats: ${OUTPUT_FORMATS.join(", ")}`
+        );
+      }
       config.outputFormat = args.format;
     }
     if (typeof args["reference-language"] === "string") {

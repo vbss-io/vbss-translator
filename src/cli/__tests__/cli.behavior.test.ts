@@ -7,6 +7,7 @@ import {
   afterEach,
 } from "@jest/globals";
 import { resolve } from "path";
+import { isDirectExecution } from "@/cli/index";
 import { generate } from "@/cli/generator";
 import { startWatch } from "@/cli/watch";
 import { configLoader } from "@/cli/config";
@@ -312,6 +313,50 @@ describe("cli main behavior", () => {
     });
   });
 
+  describe("isDirectExecution", () => {
+    it.each([
+      ["C:\\proj\\dist\\cli\\index.js"],
+      ["D:\\tools\\app\\node_modules\\vbss-translator\\dist\\run.js"],
+      ["/work/dist/cli/index.js"],
+      ["/usr/lib/node_modules/vbss-translator/bin/run.js"],
+    ])("recognizes %s as the CLI entry", (path) => {
+      expect(isDirectExecution(path)).toBe(true);
+    });
+
+    it.each([["/work/other/script.js"], ["C:\\proj\\scripts\\build.js"], [""]])(
+      "does not recognize %p as the CLI entry",
+      (path) => {
+        expect(isDirectExecution(path)).toBe(false);
+      }
+    );
+
+    it("does not recognize a missing entry path", () => {
+      expect(isDirectExecution(undefined)).toBe(false);
+    });
+  });
+
+  describe("invalid format", () => {
+    it.each([["json"], ["jsx"], ["TS"]])(
+      "exits 1 with the accepted formats and generates nothing for --format %s",
+      async (format) => {
+        await run("--format", format);
+        const text = output(error);
+        expect(text).toContain(`"${format}"`);
+        expect(text).toContain("ts, js, tsx");
+        expect(exit).toHaveBeenCalledWith(1);
+        expect(mockGenerate).not.toHaveBeenCalled();
+        expect(mockStartWatch).not.toHaveBeenCalled();
+      }
+    );
+
+    it("rejects an invalid format written with an equals sign", async () => {
+      await run("--format=json");
+      expect(output(error)).toContain("ts, js, tsx");
+      expect(exit).toHaveBeenCalledWith(1);
+      expect(mockGenerate).not.toHaveBeenCalled();
+    });
+  });
+
   describe("direct execution", () => {
     const originalWorkerId = process.env.JEST_WORKER_ID;
 
@@ -340,6 +385,13 @@ describe("cli main behavior", () => {
     it("runs main when the entry path contains vbss-translator", async () => {
       await loadAsEntry("/usr/lib/node_modules/vbss-translator/bin/run.js");
       expect(mockGenerate).toHaveBeenCalledTimes(1);
+    });
+
+    it("runs main for a Windows entry path outside a vbss-translator folder", async () => {
+      await loadAsEntry("C:\\proj\\dist\\cli\\index.js", "--pattern", "w/**/t.json");
+      expect(mockGenerate).toHaveBeenCalledWith(
+        expect.objectContaining({ pattern: "w/**/t.json" })
+      );
     });
 
     it("does not run main for an unrelated entry path", async () => {
