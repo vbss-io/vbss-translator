@@ -224,6 +224,19 @@ describe("watch behavior", () => {
       service.stop();
     });
 
+    it("matches negated bracket classes like discovery does", async () => {
+      const callback = jest.fn();
+      const service = await startedService("src/**/[!ab].json", callback);
+      listeners()[0]("change", "src/x/a.json");
+      listeners()[0]("change", "src/x/b.json");
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(callback).not.toHaveBeenCalled();
+      listeners()[0]("change", "src/x/c.json");
+      await jest.advanceTimersByTimeAsync(300);
+      expect(callback).toHaveBeenCalledTimes(1);
+      service.stop();
+    });
+
     it("treats regular expression characters in the pattern literally", async () => {
       const callback = jest.fn();
       const service = await startedService("src/(**/translations.json", callback);
