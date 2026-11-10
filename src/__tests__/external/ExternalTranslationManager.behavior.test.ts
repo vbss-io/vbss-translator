@@ -524,6 +524,92 @@ describe("ExternalTranslationManager behavior", () => {
       );
     });
 
+    it("enforces the timeout when the provider ignores the signal and never settles", async () => {
+      jest.useFakeTimers();
+      const translate: TranslateMock = jest.fn(
+        () => new Promise<TranslateResult>(() => {})
+      );
+      const onTranslationError = jest.fn();
+      const manager = new ExternalTranslationManager({
+        provider: provider(translate),
+        config: config({ timeoutMs: 100, onTranslationError }),
+        logger: logger(),
+      });
+      let settled = false;
+      const pending = manager.translate(request()).then((value) => {
+        settled = true;
+        return value;
+      });
+      await jest.advanceTimersByTimeAsync(99);
+      expect(settled).toBe(false);
+      await jest.advanceTimersByTimeAsync(1);
+      await expect(pending).resolves.toBeUndefined();
+      expect(onTranslationError.mock.calls[0][0].error).toEqual(
+        expect.objectContaining({
+          code: "timeout",
+          message: "External translation timed out after 100ms",
+          retryable: true,
+        })
+      );
+    });
+
+    it("calls the provider again for the same key after a hung call timed out", async () => {
+      jest.useFakeTimers();
+      const translate: TranslateMock = jest
+        .fn()
+        .mockImplementationOnce(() => new Promise<TranslateResult>(() => {}))
+        .mockResolvedValueOnce(result("Hola"));
+      const manager = new ExternalTranslationManager({
+        provider: provider(translate),
+        config: config({ timeoutMs: 100, cache: { enabled: false, ttlMs: 0 } }),
+        logger: logger(),
+      });
+      const first = manager.translate(request());
+      await jest.advanceTimersByTimeAsync(100);
+      await expect(first).resolves.toBeUndefined();
+      await expect(manager.translate(request())).resolves.toEqual(
+        result("Hola")
+      );
+      expect(translate).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps resolving a fast provider and leaves no timer or abort listener behind", async () => {
+      jest.useFakeTimers();
+      const signal = new AbortController().signal;
+      const removeSpy = jest.spyOn(signal, "removeEventListener");
+      const manager = new ExternalTranslationManager({
+        provider: resolvingProvider("Hola"),
+        config: config({ timeoutMs: 100 }),
+      });
+      await expect(manager.translate(request({ signal }))).resolves.toEqual(
+        result("Hola")
+      );
+      expect(jest.getTimerCount()).toBe(0);
+      expect(removeSpy).toHaveBeenCalledWith("abort", expect.any(Function));
+    });
+
+    it("still forwards an external abort to the provider and leaves no timer behind", async () => {
+      jest.useFakeTimers();
+      const translate = abortAware();
+      const external = new AbortController();
+      const onTranslationError = jest.fn();
+      const manager = new ExternalTranslationManager({
+        provider: provider(translate),
+        config: config({ timeoutMs: 5_000, onTranslationError }),
+        logger: logger(),
+      });
+      const pending = manager.translate(request({ signal: external.signal }));
+      await jest.advanceTimersByTimeAsync(10);
+      external.abort();
+      await expect(pending).resolves.toBeUndefined();
+      expect(translate.mock.calls[0][1]?.signal?.aborted).toBe(true);
+      expect(onTranslationError.mock.calls[0][0].error).toEqual(
+        expect.objectContaining({ message: "aborted by signal" })
+      );
+      expect(onTranslationError.mock.calls[0][0].error.code).not.toBe("timeout");
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
     it("clears the timeout timer after a successful translation", async () => {
       jest.useFakeTimers();
       const manager = new ExternalTranslationManager({

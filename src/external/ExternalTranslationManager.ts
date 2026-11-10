@@ -38,12 +38,7 @@ const isPositiveNumber = (value: number | undefined): value is number => {
 const sortObjectKeys = (
   input: Record<string, string>
 ): Record<string, string> => {
-  const entries = Object.entries(input).sort(([a], [b]) => {
-    if (a === b) {
-      return 0;
-    }
-    return a < b ? -1 : 1;
-  });
+  const entries = Object.entries(input).sort(([a], [b]) => (a < b ? -1 : 1));
 
   return Object.fromEntries(entries);
 };
@@ -244,7 +239,7 @@ export class ExternalTranslationManager {
     }
 
     const controller = new AbortController();
-    let timeoutTriggered = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let abortHandler: (() => void) | undefined;
 
     if (signal) {
@@ -258,31 +253,30 @@ export class ExternalTranslationManager {
       }
     }
 
-    const timer =
-      isPositiveNumber(timeoutMs) && timeoutMs
-        ? setTimeout(() => {
-            timeoutTriggered = true;
+    const timeout = isPositiveNumber(timeoutMs)
+      ? new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
             controller.abort();
-          }, timeoutMs)
-        : undefined;
+            reject(
+              new ExternalTranslationTimeoutError(
+                `External translation timed out after ${timeoutMs}ms`
+              )
+            );
+          }, timeoutMs);
+        })
+      : undefined;
+
+    const call = new Promise<TranslateResult>((resolve) => {
+      resolve(
+        this.provider.translate(request, {
+          timeoutMs: isPositiveNumber(timeoutMs) ? timeoutMs : undefined,
+          signal: controller.signal,
+        })
+      );
+    });
 
     try {
-      return await this.provider.translate(request, {
-        timeoutMs: isPositiveNumber(timeoutMs) ? timeoutMs : undefined,
-        signal: controller.signal,
-      });
-    } catch (error) {
-      if (timeoutTriggered) {
-        throw new ExternalTranslationTimeoutError(
-          `External translation timed out after ${timeoutMs}ms`
-        );
-      }
-
-      if (controller.signal.aborted && !timeoutTriggered) {
-        throw error;
-      }
-
-      throw error;
+      return await (timeout ? Promise.race([call, timeout]) : call);
     } finally {
       if (timer) {
         clearTimeout(timer);
@@ -290,6 +284,7 @@ export class ExternalTranslationManager {
       if (abortHandler && signal) {
         signal.removeEventListener("abort", abortHandler);
       }
+      call.catch(() => undefined);
     }
   }
 
