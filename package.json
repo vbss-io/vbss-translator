@@ -65,12 +65,14 @@
     "test:coverage": "jest --coverage --maxWorkers=2 && node scripts/coverage-per-file.mjs",
     "generate-translations": "node dist/cli/index.js",
     "typecheck": "tsc --noEmit",
+    "release": "node scripts/release.mjs",
+    "release:dry": "node scripts/release.mjs --dry-run",
     "patch-deploy": "node scripts/release.mjs patch",
     "minor-deploy": "node scripts/release.mjs minor",
     "major-deploy": "node scripts/release.mjs major",
     "lock-guard": "node scripts/lock-guard-since-published.mjs",
     "audit-gate": "node scripts/audit-gate.mjs",
-    "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run lock-guard && npm run audit-gate",
+    "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run lock-guard && npm run audit-gate && npm run build",
     "prepublishOnly": "node scripts/release-gate.mjs"
   },
   "dependencies": {

@@ -536,20 +536,26 @@ Rules enforced by the generator:
 
 ## Publishing
 
-Releases are published manually (there is no CI in this repository) and only through the deploy scripts:
+Releases are published manually (there is no CI in this repository) and only through the release script:
 
 ```bash
-npm run patch-deploy   # or minor-deploy / major-deploy
+npm run release:dry -- patch                      # rehearsal: gates, version, publish --dry-run, repository restored
+npm run release -- patch --yes-publish            # real release (or minor / major)
+npm run patch-deploy -- --yes-publish             # same as above (or minor-deploy / major-deploy)
 ```
+
+A real release only starts with the explicit `--yes-publish` argument; without it the script refuses before doing anything. The bump and the flags are accepted in any order. Dry mode is also detected when npm swallows the flag (`npm run release patch --dry-run` without `--` sets `npm_config_dry_run`), so that mistyped form stays a dry run and never becomes a real release. Always keep the `--` before the script arguments. The script prints the package and version it is about to publish.
 
 `.npmrc` sets `ignore-scripts=true` as supply-chain protection, so npm never runs `prepublishOnly` on its own. `scripts/release.mjs` therefore runs the whole release in a single process:
 
 1. Refuses a dirty working tree.
-2. `npm run verify` (lint, typecheck, jest with the global 90/80/90/90 thresholds, the per-file 80 check in `scripts/coverage-per-file.mjs`, build, lock-guard, audit-gate). Any failure stops the release before the version bump.
+2. `npm run verify` (lint, typecheck, jest with the global 90/80/90/90 thresholds, the per-file 80 check in `scripts/coverage-per-file.mjs`, lock-guard, audit-gate and, as the last step, build). Any failure stops the release before the version bump. Because the build is the last step, the `dist/` fingerprint is taken right after the build.
 3. `npm version <bump>`, then confirms the version commit only touched `package.json`/`package-lock.json`.
 4. Confirms `dist/` is byte-identical to what verify built, then `npm publish`.
 
-`node scripts/release.mjs <patch|minor|major> --dry-run` runs the same gates, bumps the version without committing (restored afterwards) and ends in `npm publish --dry-run`.
+If the script refuses after the version step (including a missing `dist/`), it undoes only what it created: it deletes the tag it made and runs `git reset --keep` back to the pre-release commit, then reports. Once `npm publish` has started nothing is undone, so check the registry before anything else. Do not edit files while a release runs: the tree is proven clean before versioning and the cleanup assumes nothing else changes it.
+
+`--dry-run` runs the same gates, bumps the version without committing (restored afterwards) and ends in `npm publish --dry-run`.
 
 Do not run a bare `npm publish`: with `ignore-scripts=true` npm skips `prepublishOnly`, and with scripts enabled it refuses unless `VBSS_RELEASE=1`, which only `scripts/release.mjs` sets.
 
