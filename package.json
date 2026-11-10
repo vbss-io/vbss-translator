@@ -62,11 +62,16 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "coverage": "jest --coverage",
+    "test:coverage": "jest --coverage --maxWorkers=2",
     "generate-translations": "node dist/cli/index.js",
     "typecheck": "tsc --noEmit",
     "patch-deploy": "npm version patch && npm publish",
     "minor-deploy": "npm version minor && npm publish",
-    "major-deploy": "npm version major && npm publish"
+    "major-deploy": "npm version major && npm publish",
+    "lock-guard": "node scripts/lock-guard-since-published.mjs",
+    "audit-gate": "node scripts/audit-gate.mjs",
+    "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run build && npm run lock-guard && npm run audit-gate",
+    "prepublishOnly": "npm run verify"
   },
   "dependencies": {
     "axios": "^1.20.0",

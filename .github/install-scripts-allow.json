@@ -1,0 +1,12 @@
+[
+  {
+    "package": "esbuild",
+    "version": "0.25.12",
+    "reason": "dev only (vite); postinstall only validates the platform binary and is never run because .npmrc sets ignore-scripts=true"
+  },
+  {
+    "package": "unrs-resolver",
+    "version": "1.11.1",
+    "reason": "dev only (jest resolver); napi postinstall only checks the platform binding and is never run because .npmrc sets ignore-scripts=true"
+  }
+]
