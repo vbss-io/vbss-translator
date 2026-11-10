@@ -542,13 +542,16 @@ Releases are published manually (there is no CI in this repository) and only thr
 npm run patch-deploy   # or minor-deploy / major-deploy
 ```
 
-`.npmrc` sets `ignore-scripts=true` as supply-chain protection, so npm never runs `prepublishOnly` on its own. The deploy scripts therefore run the gate explicitly:
+`.npmrc` sets `ignore-scripts=true` as supply-chain protection, so npm never runs `prepublishOnly` on its own. `scripts/release.mjs` therefore runs the whole release in a single process:
 
-1. `npm run verify` (lint, typecheck, jest with the global 90/80/90/90 thresholds, the per-file 80 check in `scripts/coverage-per-file.mjs`, build, lock-guard, audit-gate). Any failure stops the release before the version bump.
-2. A successful verify writes `.verify-stamp.json` (gitignored) tied to the current git HEAD, the `package-lock.json` hash and a clean working tree.
-3. `scripts/release.mjs` refuses to continue without a matching stamp, runs `npm version`, confirms the version commit only touched `package.json`/`package-lock.json`, re-stamps and runs `npm publish`.
+1. Refuses a dirty working tree.
+2. `npm run verify` (lint, typecheck, jest with the global 90/80/90/90 thresholds, the per-file 80 check in `scripts/coverage-per-file.mjs`, build, lock-guard, audit-gate). Any failure stops the release before the version bump.
+3. `npm version <bump>`, then confirms the version commit only touched `package.json`/`package-lock.json`.
+4. Confirms `dist/` is byte-identical to what verify built, then `npm publish`.
 
-Do not run a bare `npm publish`: with `ignore-scripts=true` npm skips `prepublishOnly` (which runs the same stamp check) and nothing else stops the upload.
+`node scripts/release.mjs <patch|minor|major> --dry-run` runs the same gates, bumps the version without committing (restored afterwards) and ends in `npm publish --dry-run`.
+
+Do not run a bare `npm publish`: with `ignore-scripts=true` npm skips `prepublishOnly`, and with scripts enabled it refuses unless `VBSS_RELEASE=1`, which only `scripts/release.mjs` sets.
 
 ---
 
