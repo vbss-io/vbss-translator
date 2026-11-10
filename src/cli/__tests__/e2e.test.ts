@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { writeFile, mkdir, rm, readFile } from "fs/promises";
 import { resolve, join } from "path";
 import { existsSync } from "fs";
+import { testTmpDir } from "@/__tests__/helpers/tmpDir";
 import { generate } from "@/cli/generator";
 import type { GeneratorOptions } from "@/cli/types";
 
@@ -11,7 +12,7 @@ describe("E2E: Translation File Generation", () => {
 
   beforeEach(async () => {
     originalCwd = process.cwd();
-    testDir = resolve(__dirname, "../../../../.test-e2e-tmp");
+    testDir = testTmpDir("e2e");
     if (existsSync(testDir)) {
       await rm(testDir, { recursive: true, force: true });
     }

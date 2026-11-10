@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
-import { mkdtemp, mkdir, writeFile, rm, symlink } from "fs/promises";
-import { tmpdir } from "os";
+import { mkdir, writeFile, rm, symlink } from "fs/promises";
 import { join, resolve } from "path";
 import { expandBraces, findFiles } from "@/cli/discover";
+import { makeTestTmpDir } from "@/__tests__/helpers/tmpDir";
 
 const FIXTURE_FILES = [
   "translations.json",
@@ -63,7 +63,7 @@ describe("findFiles", () => {
     findFiles(pattern, { cwd: root, absolute });
 
   beforeEach(async () => {
-    root = await mkdtemp(join(tmpdir(), "vbss-translator-discover-"));
+    root = await makeTestTmpDir("discover");
     for (const file of FIXTURE_FILES) {
       await mkdir(join(root, file, ".."), { recursive: true });
       await writeFile(join(root, file), "[]");

@@ -9,6 +9,7 @@ import {
 import { writeFile, mkdir, rm, readFile } from "fs/promises";
 import { resolve } from "path";
 import { existsSync } from "fs";
+import { testTmpDir } from "@/__tests__/helpers/tmpDir";
 
 const mockExit = jest.fn() as jest.MockedFunction<(code?: number) => never>;
 const mockConsoleLog = jest.fn();
@@ -31,7 +32,7 @@ describe("CLI Integration Tests", () => {
     process.exit = mockExit as typeof process.exit;
     console.log = mockConsoleLog;
     console.error = mockConsoleError;
-    testDir = resolve(__dirname, "../../../../.test-cli-tmp");
+    testDir = testTmpDir("cli");
     if (existsSync(testDir)) {
       await rm(testDir, { recursive: true, force: true });
     }

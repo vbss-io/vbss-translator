@@ -9,6 +9,7 @@ import {
 import { writeFile, mkdir, rm, readFile, unlink } from "fs/promises";
 import { resolve } from "path";
 import { existsSync } from "fs";
+import { testTmpDir } from "@/__tests__/helpers/tmpDir";
 import { generate } from "@/cli/generator";
 import { startWatch } from "@/cli/watch";
 import type { GeneratorOptions } from "@/cli/types";
@@ -22,7 +23,7 @@ describe("Watch Service Integration Tests", () => {
 
   beforeEach(async () => {
     originalCwd = process.cwd();
-    testDir = resolve(__dirname, "../../../../.test-watch-tmp");
+    testDir = testTmpDir("watch");
     if (existsSync(testDir)) {
       await rm(testDir, { recursive: true, force: true });
     }
