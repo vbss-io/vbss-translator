@@ -13,18 +13,13 @@ const config: Config = {
     "!src/**/*.d.ts",
     "!src/**/__tests__/**",
   ],
+  coverageReporters: ["text", "lcov", "clover", "json", "json-summary"],
   coverageThreshold: {
     global: {
       statements: 90,
       branches: 80,
       functions: 90,
       lines: 90,
-    },
-    "./src/**/*.{ts,tsx}": {
-      statements: 80,
-      branches: 80,
-      functions: 80,
-      lines: 80,
     },
   },
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],

@@ -62,7 +62,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "coverage": "jest --coverage",
-    "test:coverage": "jest --coverage --maxWorkers=2",
+    "test:coverage": "jest --coverage --maxWorkers=2 && node scripts/coverage-per-file.mjs",
     "generate-translations": "node dist/cli/index.js",
     "typecheck": "tsc --noEmit",
     "patch-deploy": "npm version patch && npm publish",
