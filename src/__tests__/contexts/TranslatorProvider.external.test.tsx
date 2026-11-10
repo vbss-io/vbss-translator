@@ -283,6 +283,70 @@ describe("TranslatorProvider with a real manager and a faked provider", () => {
       ).toBe(true);
     });
 
+    it("stops forcing external translation for a key removed from the config and keeps runtime keys", async () => {
+      const translate = resolvingTranslate("Ola externo");
+      const provider = customProvider(translate);
+      const first = enabled(provider, { alwaysExternalKeys: ["Hello"] });
+      const second = enabled(provider, { alwaysExternalKeys: [] });
+      let current = first;
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <TranslatorProvider
+          translations={translations}
+          defaultLanguage="pt"
+          externalTranslation={current}
+        >
+          {children}
+        </TranslatorProvider>
+      );
+      const { result, rerender } = renderHook(() => useTranslatorContext(), {
+        wrapper,
+      });
+      act(() => {
+        result.current.registerExternalKey("Cat");
+      });
+      current = second;
+      rerender();
+      await settle();
+      const keys = result.current.externalConfig.alwaysExternalKeys;
+      expect(keys.has("Hello")).toBe(false);
+      expect(keys.has("Cat")).toBe(true);
+      expect(result.current.t("Hello")).toBe("Ola");
+      await settle();
+      expect(translate).not.toHaveBeenCalled();
+      act(() => {
+        result.current.t("Cat");
+      });
+      await settle();
+      expect(translate).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps a runtime key that the config also declared after the config drops it", () => {
+      const provider = customProvider(resolvingTranslate());
+      const first = enabled(provider, { alwaysExternalKeys: ["a"] });
+      const second = enabled(provider, { alwaysExternalKeys: [] });
+      let current = first;
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <TranslatorProvider
+          translations={translations}
+          defaultLanguage="pt"
+          externalTranslation={current}
+        >
+          {children}
+        </TranslatorProvider>
+      );
+      const { result, rerender } = renderHook(() => useTranslatorContext(), {
+        wrapper,
+      });
+      act(() => {
+        result.current.registerExternalKey("a");
+      });
+      current = second;
+      rerender();
+      expect(result.current.externalConfig.alwaysExternalKeys.has("a")).toBe(
+        true
+      );
+    });
+
     it("keeps the same key set when a key is registered twice", () => {
       const { result } = renderProvider(
         enabled(customProvider(resolvingTranslate()))

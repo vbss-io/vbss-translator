@@ -158,20 +158,17 @@ export const TranslatorProvider = ({
     () => resolveExternalTranslationConfig(externalTranslation),
     [externalTranslation]
   );
-  const [externalKeys, setExternalKeys] = useState<Set<string>>(
-    () => new Set(baseExternalConfig.alwaysExternalKeys)
+  const [runtimeKeys, setRuntimeKeys] = useState<Set<string>>(
+    () => new Set()
   );
 
-  useEffect(() => {
-    setExternalKeys((previous) => {
-      const next = new Set(baseExternalConfig.alwaysExternalKeys);
-      previous.forEach((key) => next.add(key));
-      return next;
-    });
-  }, [baseExternalConfig]);
+  const externalKeys = useMemo(
+    () => new Set([...baseExternalConfig.alwaysExternalKeys, ...runtimeKeys]),
+    [baseExternalConfig, runtimeKeys]
+  );
 
   const registerExternalKey = useCallback((key: string) => {
-    setExternalKeys((previous) => {
+    setRuntimeKeys((previous) => {
       if (previous.has(key)) {
         return previous;
       }
