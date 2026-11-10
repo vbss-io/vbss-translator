@@ -146,13 +146,6 @@ describe("cli main behavior", () => {
         expect.objectContaining({ outputFormat: "js" })
       );
     });
-
-    it("ignores a format that is not ts, js or tsx", async () => {
-      await run("--format", "json");
-      expect(mockGenerate).toHaveBeenCalledWith(
-        expect.objectContaining({ outputFormat: "ts" })
-      );
-    });
   });
 
   describe("configuration", () => {

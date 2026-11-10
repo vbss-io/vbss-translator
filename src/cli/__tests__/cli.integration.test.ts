@@ -22,8 +22,12 @@ describe("CLI Integration Tests", () => {
   let testDir: string;
   let originalConsoleLog: typeof console.log;
   let originalConsoleError: typeof console.error;
+  let originalSigint: NodeJS.SignalsListener[];
+  let originalSigterm: NodeJS.SignalsListener[];
 
   beforeEach(async () => {
+    originalSigint = process.listeners("SIGINT");
+    originalSigterm = process.listeners("SIGTERM");
     originalArgv = [...process.argv];
     originalExit = process.exit;
     originalCwd = process.cwd();
@@ -44,6 +48,17 @@ describe("CLI Integration Tests", () => {
   });
 
   afterEach(async () => {
+    process.emit("SIGTERM", "SIGTERM");
+    for (const listener of process.listeners("SIGINT")) {
+      if (!originalSigint.includes(listener)) {
+        process.removeListener("SIGINT", listener);
+      }
+    }
+    for (const listener of process.listeners("SIGTERM")) {
+      if (!originalSigterm.includes(listener)) {
+        process.removeListener("SIGTERM", listener);
+      }
+    }
     process.argv = originalArgv;
     process.exit = originalExit;
     process.chdir(originalCwd);
