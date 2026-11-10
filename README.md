@@ -444,6 +444,21 @@ npx vbss-translator generate [--pattern <glob>] [--output <path>] [--format <ts|
 
 Order of precedence: **CLI flags > config file > defaults**. Config parsing is performed by `src/cli/config.ts`.
 
+### Pattern Syntax
+
+`--pattern` (and `pattern` in the config file) uses a small built-in matcher, not the full `glob` package syntax:
+
+- `*` matches any run of characters inside one path segment, `?` matches exactly one character.
+- `**` as a whole segment matches zero or more directories.
+- `[abc]`, `[a-z]`, `[!abc]` and `[^abc]` match one character from (or outside) the set.
+- `{a,b}` expands to alternatives and can be nested (`src/{app,lib}/**/translations.json`).
+- Absolute patterns are supported; results are returned in sorted order.
+- Dot files and dot directories are only matched by a segment that itself starts with `.`; `**` never enters them.
+- `**` does not follow symlinked or junction directories; a single-level segment (`linked-*/translations.json`) does.
+- Backslashes are treated as path separators, so they cannot escape special characters.
+- Not supported: extglobs (`@(a|b)`), numeric brace ranges (`{1..3}`) and POSIX classes (`[[:alpha:]]`). The default `src/**/translations.json` and the other patterns used by the projects that consume this CLI only need the forms above.
+- Matching is case-insensitive on Windows and macOS, case-sensitive elsewhere.
+
 ### Output Formats
 
 - **ts / tsx**: Imports each JSON file with `assert { type: "json" }`, exports a `Translation` interface, merges arrays (wrapping standalone objects), dedupes using the reference language, and default-exports `uniqueTranslations`.
@@ -516,6 +531,24 @@ Rules enforced by the generator:
 - Files must be valid JSON (syntax errors are reported).
 
 > These validations are applied when you run the CLI or programmatic generator. Passing your own `Translation[]` straight into `TranslatorProvider` skips these checks, so validate manually if you craft arrays by hand.
+
+---
+
+## Publishing
+
+Releases are published manually (there is no CI in this repository) and only through the deploy scripts:
+
+```bash
+npm run patch-deploy   # or minor-deploy / major-deploy
+```
+
+`.npmrc` sets `ignore-scripts=true` as supply-chain protection, so npm never runs `prepublishOnly` on its own. The deploy scripts therefore run the gate explicitly:
+
+1. `npm run verify` (lint, typecheck, jest with the global 90/80/90/90 thresholds, the per-file 80 check in `scripts/coverage-per-file.mjs`, build, lock-guard, audit-gate). Any failure stops the release before the version bump.
+2. A successful verify writes `.verify-stamp.json` (gitignored) tied to the current git HEAD, the `package-lock.json` hash and a clean working tree.
+3. `scripts/release.mjs` refuses to continue without a matching stamp, runs `npm version`, confirms the version commit only touched `package.json`/`package-lock.json`, re-stamps and runs `npm publish`.
+
+Do not run a bare `npm publish`: with `ignore-scripts=true` npm skips `prepublishOnly` (which runs the same stamp check) and nothing else stops the upload.
 
 ---
 
