@@ -165,7 +165,7 @@ const externalTranslation = {
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `boolean` | `false` | Master switch for the entire pipeline. |
-| `timeoutMs` | `number` | `5_000` | Max duration before aborting a request. Exposed to provider via `AbortController`. Enforced even when the provider ignores the signal: the call rejects with `ExternalTranslationTimeoutError` and the same key can be requested again. |
+| `timeoutMs` | `number` | `5_000` | Max duration before aborting a request. Exposed to provider via `AbortController`. Enforced even when the provider ignores the signal: the request fails as a timeout (reported through `onTranslationError`), the original text is kept and the same key can be requested again. |
 | `debug` | `boolean` | `false` | Emits structured logs for cache hits, deduped requests, retries, etc. |
 | `provider` | `ProviderConfig` | `{ id: "google" }` | Google or custom provider config. See provider sections below. |
 | `cache` | `CacheConfig` | `{ enabled: false, ttlMs: 3_600_000 }` | In-memory cache with TTL and optional LRU size limit (`maxEntries`). |
