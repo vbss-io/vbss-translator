@@ -40,3 +40,6 @@ CLAUDE.md
 project-base.md
 # Test temp
 .test-tmp/
+
+# Release gate stamp
+.verify-stamp.json
