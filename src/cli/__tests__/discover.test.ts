@@ -21,6 +21,17 @@ const FIXTURE_FILES = [
   "other/file.json",
 ];
 
+const SYMLINK_REFUSAL_CODES = ["EPERM", "EACCES", "ENOSYS", "ENOTSUP"];
+
+const tryCreate = async (create: () => Promise<void>): Promise<string | null> => {
+  try {
+    await create();
+    return null;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code ?? "UNKNOWN";
+  }
+};
+
 describe("expandBraces", () => {
   it("returns the pattern untouched when there are no braces", () => {
     expect(expandBraces("src/**/*.json")).toEqual(["src/**/*.json"]);
@@ -255,13 +266,16 @@ describe("findFiles", () => {
   });
 
   it("follows symlinked files and symlinked directories on single-level steps", async () => {
-    try {
+    const created = await tryCreate(async () => {
       await symlink(
         join(root, "src/a/translations.json"),
         join(root, "src/x/linked.json")
       );
       await symlink(join(root, "src/a"), join(root, "linked-dir"), "junction");
-    } catch {
+    });
+    if (created !== null) {
+      expect(SYMLINK_REFUSAL_CODES).toContain(created);
+      expect(await find("src/x/other.json")).toEqual(["src/x/other.json"]);
       return;
     }
     expect(await find("src/x/linked.json")).toEqual(["src/x/linked.json"]);
@@ -274,12 +288,18 @@ describe("findFiles", () => {
   });
 
   it("ignores broken symlinks", async () => {
-    try {
-      await symlink(
+    const created = await tryCreate(() =>
+      symlink(
         join(root, "does-not-exist.json"),
         join(root, "src/x/broken.json")
-      );
-    } catch {
+      )
+    );
+    if (created !== null) {
+      expect(SYMLINK_REFUSAL_CODES).toContain(created);
+      expect(await find("src/x/*.json")).toEqual([
+        "src/x/more.json",
+        "src/x/other.json",
+      ]);
       return;
     }
     expect(await find("src/x/*.json")).toEqual([
