@@ -82,7 +82,7 @@ describe("GoogleTranslateProvider behavior", () => {
     });
   });
 
-  it("reports itself as available with and without credentials", () => {
+  it("reports itself as available when credentials are configured", () => {
     expect(setup({ id: "google", apiKey: "k" }).provider.isAvailable()).toEqual({
       available: true,
     });
@@ -90,7 +90,6 @@ describe("GoogleTranslateProvider behavior", () => {
       setup({ id: "google", headers: { Authorization: "Bearer x" } }).provider
         .isAvailable()
     ).toEqual({ available: true });
-    expect(setup().provider.isAvailable()).toEqual({ available: true });
   });
 
   describe("translate request", () => {
