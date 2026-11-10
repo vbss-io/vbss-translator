@@ -21,8 +21,14 @@ const refuse = (reason) => {
 
 const git = (...args) => execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim()
 
+let versionStepStarted = false
+
 const restoreDryRun = () => {
-  if (dryRun) git('checkout', '--', ...VERSION_FILES)
+  if (!dryRun || !versionStepStarted) return
+  const files = git('diff', '--name-only')
+    .split('\n')
+    .filter((file) => VERSION_FILES.has(file))
+  if (files.length > 0) git('checkout', '--', ...files)
 }
 
 const npm = (args) => {
@@ -68,6 +74,7 @@ requireCleanTree('after verify')
 if (git('rev-parse', 'HEAD') !== startHead) refuse('HEAD moved during verify')
 const verifiedDist = distHash()
 
+versionStepStarted = true
 if (dryRun) {
   npm(['version', bump, '--no-git-tag-version'])
 } else {
