@@ -721,9 +721,11 @@ describe("ExternalTranslationManager behavior", () => {
     it("logs deduplicated concurrent requests", async () => {
       const log = logger();
       let finish: (value: TranslateResult) => void = () => {};
-      const translate: TranslateMock = jest.fn(
-        () => new Promise<TranslateResult>((resolve) => (finish = resolve))
-      );
+      const translate: TranslateMock = jest
+        .fn()
+        .mockReturnValue(
+          new Promise<TranslateResult>((resolve) => (finish = resolve))
+        );
       const manager = new ExternalTranslationManager({
         provider: provider(translate),
         config: config({ debug: true }),
