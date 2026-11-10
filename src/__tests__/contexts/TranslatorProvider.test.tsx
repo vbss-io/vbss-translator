@@ -1243,11 +1243,7 @@ describe("TranslatorProvider", () => {
         });
         invokeTranslate(result, "Missing1");
         invokeTranslate(result, "Missing2");
-        const missingWarnings = consoleWarnSpy.mock.calls.filter(
-          (call) =>
-            (call[1] as { event: string }).event === "missing_translation"
-        );
-        expect(missingWarnings).toHaveLength(2);
+        expect(consoleWarnSpy).toHaveBeenCalledTimes(2);
         expect(externalManagerTranslateMock).toHaveBeenCalledTimes(2);
         await flushMicrotasks();
         consoleWarnSpy.mockRestore();
