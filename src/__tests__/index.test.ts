@@ -17,6 +17,28 @@ describe("index.ts exports", () => {
     });
   });
 
+  describe("factory and generator exports", () => {
+    it("exports createTranslationProvider from the provider factory", async () => {
+      const entry = await import("@/index");
+      const factory = await import("@/external/providers/factory");
+      expect(entry.createTranslationProvider).toBe(
+        factory.createTranslationProvider
+      );
+    });
+
+    it("exports generate from the generator entry", async () => {
+      const entry = await import("@/generator");
+      const cli = await import("@/cli/generator");
+      expect(entry.generate).toBe(cli.generate);
+    });
+
+    it("exports generate from the cli api entry", async () => {
+      const entry = await import("@/cli/api");
+      const cli = await import("@/cli/generator");
+      expect(entry.generate).toBe(cli.generate);
+    });
+  });
+
   describe("Public API exports", () => {
     it("should export both TranslatorProvider and useTranslator", () => {
       expect(TranslatorProvider).toBeDefined();
