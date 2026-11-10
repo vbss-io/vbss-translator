@@ -40,7 +40,7 @@ const success = (overrides: Partial<GenerationResult> = {}): GenerationResult =>
 });
 
 const listeners = (): WatchListener[] =>
-  mockWatch.mock.calls.map((call) => call[2] as unknown as WatchListener);
+  mockWatch.mock.calls.map((call) => (call as unknown[])[2] as WatchListener);
 
 describe("watch behavior", () => {
   let watcher: { on: jest.Mock; close: jest.Mock };
@@ -296,7 +296,7 @@ describe("watch behavior", () => {
         resolve(process.cwd(), "src/b"),
         process.cwd(),
       ]);
-      expect(mockWatch.mock.calls.every((call) => (call[1] as { recursive: boolean }).recursive)).toBe(true);
+      expect(mockWatch.mock.calls.every((call) => (call[1] as unknown as { recursive: boolean }).recursive)).toBe(true);
       service.stop();
     });
 
