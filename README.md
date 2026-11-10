@@ -165,7 +165,7 @@ const externalTranslation = {
 | Field | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `enabled` | `boolean` | `false` | Master switch for the entire pipeline. |
-| `timeoutMs` | `number` | `5_000` | Max duration before aborting a request. Exposed to provider via `AbortController`. |
+| `timeoutMs` | `number` | `5_000` | Max duration before aborting a request. Exposed to provider via `AbortController`. Enforced even when the provider ignores the signal: the call rejects with `ExternalTranslationTimeoutError` and the same key can be requested again. |
 | `debug` | `boolean` | `false` | Emits structured logs for cache hits, deduped requests, retries, etc. |
 | `provider` | `ProviderConfig` | `{ id: "google" }` | Google or custom provider config. See provider sections below. |
 | `cache` | `CacheConfig` | `{ enabled: false, ttlMs: 3_600_000 }` | In-memory cache with TTL and optional LRU size limit (`maxEntries`). |
@@ -178,6 +178,7 @@ const externalTranslation = {
 ### Provider Behaviour
 
 - The Google provider (`src/external/providers/googleTranslateProvider.ts`) constructs REST calls to the v2 API, supports Glossaries, forwards custom headers, and normalizes errors (incl. retryable codes).
+- The Google provider reports unavailable when it has no `apiKey`, no non-empty `headers` and no custom `endpoint`; `TranslatorProvider` then emits the `TranslatorProvider_provider_unavailable` warning. The availability check only runs when `externalTranslation.enabled` is `true`.
 - Providers may implement `normalizeError` to produce structured failures consumed by the manager.
 - `ExternalTranslationManager` dedupes identical requests, enforces `timeoutMs`, respects `AbortSignal`, handles cache reads/writes, and never throws back into your components. All errors are converted into loggable events and surfaced via callbacks.
 
@@ -437,10 +438,10 @@ npx vbss-translator generate [--pattern <glob>] [--output <path>] [--format <ts|
 | --- | --- | --- |
 | `--pattern` | Glob for JSON sources. Resolved relative to `process.cwd()`. | `src/**/translations.json` |
 | `--output` | Output file path. Parent directories are created automatically. | `src/translations/index.ts` |
-| `--format` | Output format (`ts`, `js`, or `tsx`). | `ts` |
+| `--format` | Output format (`ts`, `js`, or `tsx`). Any other value exits with code `1` and lists the accepted formats, without generating a file. | `ts` |
 | `--reference-language` | Language key used for deduplication. | First language in the first valid file |
 | `--config` | Path to `vbss-translator.config.json`. | Project root |
-| `--watch`, `-w` | Watch mode with regeneration + debug logs. | Disabled |
+| `--watch`, `-w` | Watch mode with regeneration. | Disabled |
 
 Order of precedence: **CLI flags > config file > defaults**. Config parsing is performed by `src/cli/config.ts`.
 
@@ -483,7 +484,6 @@ Generation fails fast when validation errors occur; exit code `2` signals schema
 - Uses native `fs.watch` with glob filtering to detect additions, changes, and deletions.
 - Debounces rapid changes (300ms) and regenerates the output file.
 - Keeps running until interrupted. Clean-up handlers close watchers on `SIGINT`/`SIGTERM`.
-- Emits verbose debug logs to help diagnose path matching.
 
 ### Programmatic API
 
