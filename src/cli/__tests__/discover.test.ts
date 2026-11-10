@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
 import { mkdir, writeFile, rm, symlink } from "fs/promises";
 import { join, resolve } from "path";
-import { expandBraces, findFiles } from "@/cli/discover";
+import { expandBraces, findFiles, matchesGlob } from "@/cli/discover";
 import { makeTestTmpDir } from "@/__tests__/helpers/tmpDir";
 
 const FIXTURE_FILES = [
@@ -306,5 +306,64 @@ describe("findFiles", () => {
       "src/x/more.json",
       "src/x/other.json",
     ]);
+  });
+});
+
+describe("matchesGlob", () => {
+  it("matches brace alternatives across directories", () => {
+    expect(matchesGlob("src/x/a.json", "src/**/{a,b}.json")).toBe(true);
+    expect(matchesGlob("src/b.json", "src/**/{a,b}.json")).toBe(true);
+    expect(matchesGlob("src/x/c.json", "src/**/{a,b}.json")).toBe(false);
+  });
+
+  it("matches bracket classes and negated classes", () => {
+    expect(matchesGlob("src/a.json", "src/[ab].json")).toBe(true);
+    expect(matchesGlob("src/c.json", "src/[ab].json")).toBe(false);
+    expect(matchesGlob("src/c.json", "src/[!ab].json")).toBe(true);
+    expect(matchesGlob("src/a.json", "src/[!ab].json")).toBe(false);
+  });
+
+  it("lets a globstar match zero or many directories", () => {
+    expect(matchesGlob("src/t.json", "src/**/t.json")).toBe(true);
+    expect(matchesGlob("src/a/b/c/t.json", "src/**/t.json")).toBe(true);
+    expect(matchesGlob("lib/t.json", "src/**/t.json")).toBe(false);
+  });
+
+  it("requires at least one entry for a trailing globstar", () => {
+    expect(matchesGlob("src/a/b.json", "src/**")).toBe(true);
+    expect(matchesGlob("src", "src/**")).toBe(false);
+  });
+
+  it("does not let a globstar or a wildcard cross hidden entries", () => {
+    expect(matchesGlob("src/.hidden/t.json", "src/**/t.json")).toBe(false);
+    expect(matchesGlob("src/.hidden.json", "src/*.json")).toBe(false);
+    expect(matchesGlob("src/.hidden.json", "src/.*.json")).toBe(true);
+    expect(matchesGlob("src/a/.t.json", "src/**")).toBe(false);
+  });
+
+  it("matches question marks and stars inside one segment only", () => {
+    expect(matchesGlob("src/a/file.json", "src/?/*.json")).toBe(true);
+    expect(matchesGlob("src/ab/file.json", "src/?/*.json")).toBe(false);
+    expect(matchesGlob("src/a/b/file.json", "src/*/file.json")).toBe(false);
+  });
+
+  it("treats regular expression characters literally", () => {
+    expect(matchesGlob("src/(x)/t.json", "src/(x)/t.json")).toBe(true);
+    expect(matchesGlob("src/x/t.json", "src/(x)/t.json")).toBe(false);
+  });
+
+  it("accepts backslash separators in the path and the pattern", () => {
+    expect(matchesGlob("src\\x\\t.json", "src/**/t.json")).toBe(true);
+    expect(matchesGlob("src/x/t.json", "src\\**\\t.json")).toBe(true);
+  });
+
+  it("ignores leading dot segments and rejects an empty pattern", () => {
+    expect(matchesGlob("src/t.json", "./src/t.json")).toBe(true);
+    expect(matchesGlob("src/t.json", "")).toBe(false);
+  });
+
+  it("is case sensitive only on case sensitive platforms", () => {
+    const insensitive = ["win32", "darwin"].includes(process.platform);
+    expect(matchesGlob("SRC/T.json", "src/t.json")).toBe(insensitive);
   });
 });

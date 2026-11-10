@@ -14,7 +14,10 @@ import { generate } from "@/cli/generator";
 import type { GeneratorOptions } from "@/cli/types";
 
 jest.mock("fs");
-jest.mock("@/cli/discover");
+jest.mock("@/cli/discover", () => ({
+  ...jest.requireActual<typeof import("@/cli/discover")>("@/cli/discover"),
+  findFiles: jest.fn(),
+}));
 jest.mock("@/cli/generator");
 
 const mockWatch = watch as jest.MockedFunction<typeof watch>;

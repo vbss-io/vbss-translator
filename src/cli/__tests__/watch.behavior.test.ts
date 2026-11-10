@@ -14,7 +14,10 @@ import { WatchServiceImpl, startWatch } from "@/cli/watch";
 import type { GenerationResult, GeneratorOptions } from "@/cli/types";
 
 jest.mock("fs");
-jest.mock("@/cli/discover");
+jest.mock("@/cli/discover", () => ({
+  ...jest.requireActual<typeof import("@/cli/discover")>("@/cli/discover"),
+  findFiles: jest.fn(),
+}));
 jest.mock("@/cli/generator");
 
 const mockWatch = watch as jest.MockedFunction<typeof watch>;
@@ -194,16 +197,87 @@ describe("watch behavior", () => {
       service.stop();
     });
 
-    it("falls back to translations.json under src when the pattern is not a valid regular expression", async () => {
+    it("matches brace alternatives like discovery does", async () => {
       const callback = jest.fn();
-      const service = await startedService("src/(**/translations.json", callback);
-      listeners()[0]("change", "src/x/translations.json");
+      const service = await startedService("src/**/{a,b}.json", callback);
+      listeners()[0]("change", "src/x/a.json");
       await jest.advanceTimersByTimeAsync(300);
       expect(callback).toHaveBeenCalledTimes(1);
-      listeners()[0]("change", "lib/x/translations.json");
-      listeners()[0]("change", "src/x/other.json");
+      listeners()[0]("change", "src/b.json");
+      await jest.advanceTimersByTimeAsync(300);
+      expect(callback).toHaveBeenCalledTimes(2);
+      listeners()[0]("change", "src/x/c.json");
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(callback).toHaveBeenCalledTimes(2);
+      service.stop();
+    });
+
+    it("matches bracket classes like discovery does", async () => {
+      const callback = jest.fn();
+      const service = await startedService("src/**/[ab].json", callback);
+      listeners()[0]("change", "src/x/a.json");
+      await jest.advanceTimersByTimeAsync(300);
+      expect(callback).toHaveBeenCalledTimes(1);
+      listeners()[0]("change", "src/x/c.json");
       await jest.advanceTimersByTimeAsync(1_000);
       expect(callback).toHaveBeenCalledTimes(1);
+      service.stop();
+    });
+
+    it("treats regular expression characters in the pattern literally", async () => {
+      const callback = jest.fn();
+      const service = await startedService("src/(**/translations.json", callback);
+      listeners()[0]("change", "src/(x/translations.json");
+      await jest.advanceTimersByTimeAsync(300);
+      expect(callback).toHaveBeenCalledTimes(1);
+      listeners()[0]("change", "src/x/translations.json");
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(callback).toHaveBeenCalledTimes(1);
+      service.stop();
+    });
+
+    it("matches an absolute pattern against the absolute path", async () => {
+      const callback = jest.fn();
+      const absolutePattern = `${resolve(process.cwd(), "src").split("\\").join("/")}/**/*.json`;
+      const service = await startedService(absolutePattern, callback);
+      listeners()[0]("change", "src/x/a.json");
+      await jest.advanceTimersByTimeAsync(300);
+      expect(callback).toHaveBeenCalledTimes(1);
+      listeners()[0]("change", "lib/x/a.json");
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(callback).toHaveBeenCalledTimes(1);
+      service.stop();
+    });
+  });
+
+  describe("debug output", () => {
+    const debugCalls = (spy: jest.SpiedFunction<typeof console.log>) =>
+      spy.mock.calls.filter((call) => String(call[0]).startsWith("[DEBUG]"));
+
+    it("never prints debug traces while watching, handling events and regenerating", async () => {
+      const service = await startedService();
+      listeners()[0]("change", "src/a/translations.json");
+      listeners()[0]("rename", "src/new/translations.json");
+      listeners()[0]("change", "src/a/other.json");
+      listeners()[0]("rename", "");
+      await jest.advanceTimersByTimeAsync(1_000);
+      expect(mockGenerate).toHaveBeenCalledTimes(1);
+      expect(debugCalls(log)).toEqual([]);
+      expect(
+        error.mock.calls.filter((call) => String(call[0]).startsWith("[DEBUG]"))
+      ).toEqual([]);
+      service.stop();
+    });
+
+    it("never prints debug traces when a watcher fails", async () => {
+      const service = await startedService();
+      const onError = watcher.on.mock.calls.find(
+        (call) => call[0] === "error"
+      )?.[1] as (reason: Error) => void;
+      onError(new Error("EPERM"));
+      expect(
+        error.mock.calls.filter((call) => String(call[0]).startsWith("[DEBUG]"))
+      ).toEqual([]);
       service.stop();
     });
   });

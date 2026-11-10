@@ -134,6 +134,74 @@ const toSteps = (segments: string[], caseInsensitive: boolean): Step[] => {
   return steps;
 };
 
+const stepMatchesSegment = (
+  step: Exclude<Step, { kind: "globstar" }>,
+  segment: string,
+  caseInsensitive: boolean
+): boolean => {
+  if (step.kind === "literal") {
+    return caseInsensitive
+      ? step.text.toLowerCase() === segment.toLowerCase()
+      : step.text === segment;
+  }
+  if (segment.startsWith(".") && !step.matchesDotfiles) return false;
+  return step.regexp.test(segment);
+};
+
+const matchesSteps = (
+  steps: Step[],
+  stepIndex: number,
+  segments: string[],
+  segmentIndex: number,
+  caseInsensitive: boolean
+): boolean => {
+  const step = steps[stepIndex];
+  if (!step) return segmentIndex === segments.length;
+  if (step.kind !== "globstar") {
+    return (
+      segmentIndex < segments.length &&
+      stepMatchesSegment(step, segments[segmentIndex], caseInsensitive) &&
+      matchesSteps(steps, stepIndex + 1, segments, segmentIndex + 1, caseInsensitive)
+    );
+  }
+  const isLast = stepIndex === steps.length - 1;
+  if (isLast) {
+    return (
+      segmentIndex < segments.length &&
+      segments.slice(segmentIndex).every((segment) => !segment.startsWith("."))
+    );
+  }
+  for (let end = segmentIndex; end <= segments.length; end++) {
+    if (end > segmentIndex && segments[end - 1].startsWith(".")) return false;
+    if (matchesSteps(steps, stepIndex + 1, segments, end, caseInsensitive)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const toPathSegments = (path: string): string[] =>
+  path
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((segment) => segment !== "" && segment !== ".");
+
+export const matchesGlob = (path: string, pattern: string): boolean => {
+  const caseInsensitive = CASE_INSENSITIVE_PLATFORMS.has(process.platform);
+  const segments = toPathSegments(path);
+  return expandBraces(pattern.replace(/\\/g, "/")).some((expanded) => {
+    const patternSegments = toPathSegments(expanded);
+    if (patternSegments.length === 0) return false;
+    return matchesSteps(
+      toSteps(patternSegments, caseInsensitive),
+      0,
+      segments,
+      0,
+      caseInsensitive
+    );
+  });
+};
+
 const isFileEntry = async (
   directory: string,
   entry: Dirent
