@@ -10,7 +10,7 @@ if (!['patch', 'minor', 'major'].includes(bump)) {
 }
 
 const run = (args) => {
-  const result = spawnSync('npm', args, { cwd: repoRoot, stdio: 'inherit', shell: true })
+  const result = spawnSync(`npm ${args.join(' ')}`, { cwd: repoRoot, stdio: 'inherit', shell: true })
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 
